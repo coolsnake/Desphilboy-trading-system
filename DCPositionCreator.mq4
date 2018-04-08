@@ -18,10 +18,12 @@ DoTradesToggler doTradesTogglerCopy = DoTrades;
 extern TradeActs Action = NoAction;
 TradeActs actionCopy = Action;
 
-extern double BuyLots = 0.01;
-extern double SellLots = 0.01;
+extern bool CreateBuys = true;
+extern bool CreateSells = true;
+
 extern double BuyStartingPrice = 0.0;
 extern double SellStartingPrice = 0.0;
+
 extern int TradesDistance = 150;
 
 extern string PIPsToStartI = "8,16";
@@ -35,8 +37,8 @@ extern string PIPsToStartUL = "1,9";
 
 extern int TradeSpacing = 90;
 
-extern bool CreateBuys = true;
-extern bool CreateSells = true;
+extern double BuyLots = 0.01;
+extern double SellLots = 0.01;
 
 extern bool PaintPositions = true;
 

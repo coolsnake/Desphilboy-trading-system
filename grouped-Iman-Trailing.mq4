@@ -44,6 +44,7 @@ extern bool ReserveOpositeForLoosingPositions=true;
 extern bool HammerCandleHeuristic = true;
 extern bool DodgyCandleHeuroistics = true;
 extern bool PriceOverTimeHeuristic = true;
+extern bool PriceCrossedHeuristic = true;
 
 extern string AccountPairNames = "USDJPY,GBPJPY,EURJPY,USDCAD,AUDUSD,XAUUSD";
 extern bool DeletePositionsOfOtherPairs = false;
@@ -210,7 +211,8 @@ void start() {
                 , HammerCandleHeuristic
                 , DodgyCandleHeuroistics
                 , PriceOverTimeHeuristic
-                , ReserveOpositeForLoosingPositions);
+                , ReserveOpositeForLoosingPositions
+                , PriceCrossedHeuristic);
             }
         }
     }
