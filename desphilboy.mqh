@@ -775,6 +775,49 @@ double hammerHeuristic(int ticketNumber, string symbol, int orderType, bool trad
    return 1; 
 }
 
+
+//--------------
+int priceCrossedTimes(double price, string symbol,  ENUM_TIMEFRAMES timeFrame, int numberOfCandleSticks) {
+   int sumOfCrosses =  0;
+   
+   for( int i =0; i< numberOfCandleSticks; ++i) {
+    if(price < iHigh(symbol, timeFrame, i) && price > iLow(symbol, timeFrame, i)) { 
+     sumOfCrosses++;
+    }
+   }
+   
+   return sumOfCrosses;  
+}
+
+
+double priceCrossHeuristic(int ticketNumber, string symbol, double orderOpenPrice, GroupIds tradeGroup) {
+
+ Print(ticketNumber, "start hammer:");
+   
+    ENUM_TIMEFRAMES timeFrame = findStandardTimeFrameOf(TrailingInfo[tradeGroup][LifePeriod]);
+   int crosses = priceCrossedTimes(orderOpenPrice, symbol, timeFrame, 7);
+ Print("number of crosses is:", crosses);
+  
+   if(crosses > 4 ) {
+       return 1.15;
+      } 
+
+   if(crosses > 3 ) {
+       return 1.1;
+      }   
+      
+   if(crosses > 2 ) {
+       return 1.05;
+      }   
+
+   return 1; 
+}
+
+
+//--------------
+
+
+
 double dodgyHeuristic(int ticketNumber, string symbol, int orderType, bool tradeReservationEnabled, GroupIds tradeGroup) {
 
 // Print("Start dodgy:");
@@ -1164,6 +1207,7 @@ double calcHuristics(int ticketNumber
                               , bool dodgyHeuristicEnabled
                               , bool priceOverTimeHeuristic                            
                               , bool opositeLoosingTrades
+                              , bool priceCrossHeuristicEnabled
                               , bool panic) {
     double arvHeuVal = 1.0;
     double unsafeNetPosHeuVal = 1.0;
@@ -1172,6 +1216,7 @@ double calcHuristics(int ticketNumber
     double hammerHeuVal = 1.0;
     double dodgyHeuVal = 1.0;
     double priceTimeHeuVal = 1.0;
+    double priceCrossHeuVal= 1.0;
 
     GroupIds grpId = calculateGroupId(ticketNumber, magicNumber, opositeLoosingTrades, symbol);
 
@@ -1183,12 +1228,13 @@ double calcHuristics(int ticketNumber
     if (hammerHeuriticEnabled) hammerHeuVal = hammerHeuristic(ticketNumber,symbol, ordertype, opositeLoosingTrades, grpId);
     if (dodgyHeuristicEnabled) dodgyHeuVal = dodgyHeuristic(ticketNumber,symbol, ordertype, opositeLoosingTrades, grpId);
     if(priceOverTimeHeuristic && !panic) priceTimeHeuVal = priceTimeHeuristic(ticketNumber, openTime,grpId,openPrice,symbol);
+    if(priceCrossHeuristicEnabled) priceCrossHeuVal = priceCrossHeuristic(ticketNumber,symbol, openPrice, grpId);
     timeHeuVal = lifeTimeHeuristic(openTime, grpId);
     if(beVerbose) {
     Print(ticketNumber, ": timeHeu:", timeHeuVal, " unsafeNetPosHeuVal:", unsafeNetPosHeuVal, " netPoseHeuVal:", netPosHeuVal);
-    Print(ticketNumber, ": ARVHeu:", arvHeuVal, " HammerVal:", hammerHeuVal, " DodgyVal:", dodgyHeuVal, " PriceOverTimeHeu:", priceTimeHeuVal);
+    Print(ticketNumber, ": ARVHeu:", arvHeuVal, " HammerVal:", hammerHeuVal, " DodgyVal:", dodgyHeuVal, " PriceOverTimeHeu:", priceTimeHeuVal, " PriceCrossHeu:", priceCrossHeuVal);
     }
-    return timeHeuVal * arvHeuVal * unsafeNetPosHeuVal * netPosHeuVal * priceTimeHeuVal * hammerHeuVal * dodgyHeuVal;
+    return timeHeuVal * arvHeuVal * unsafeNetPosHeuVal * netPosHeuVal * priceTimeHeuVal * hammerHeuVal * dodgyHeuVal * priceCrossHeuVal;
 }
 
 
@@ -1249,7 +1295,8 @@ void trailPosition(int orderTicket,
     bool hammerCandleHeuristic,
     bool dodgycandleHeuristic,
     bool priceOverTimeHeuristic,
-    bool opositeLoosingTrades) {
+    bool opositeLoosingTrades,
+    bool priceCrossHeuristicEnabled) {
     double pBid, pAsk, pp, pDiff, pRef, pStep, pRetraceTrail, pDirectTrail;
 
     if (!OrderSelect(orderTicket, SELECT_BY_TICKET, MODE_TRADES)) {
@@ -1274,6 +1321,7 @@ void trailPosition(int orderTicket,
                                                       , dodgycandleHeuristic
                                                       , priceOverTimeHeuristic
                                                       , opositeLoosingTrades
+                                                      , priceCrossHeuristicEnabled
                                                       ,panic);
 
     double RetraceValue = getCurrentRetrace(orderTicket, tradeGroupId, continueLifeTimeAfterFirstSL, panic, heuristics, OrderSymbol(), OrderStopLoss());
