@@ -111,15 +111,21 @@ enum LifeTimes {
     FourtyHours = 2400,
     TwoDays = 2880,
     TwoDaysAnd8Hours = 3360,
+    TwoAndHalfDays = 3600,
     SixtyFourHours = 3840,
     ThreeDays = 4320,
     FourDays = 5760,
     FiveDays = 7200,
+    SixDays = 8640,
     SevenDays = 10080,
+    EightDays = 11520,
     TenDays = 14400,
     TwelveDays = 17280,
     FortNight = 20160,
-    FifteenDays = 21600
+    FifteenDays = 21600,
+    SixteenDays = 23040,
+    EighteenDays = 25920,
+    TwentyDays = 28800
     
 };
 
@@ -137,14 +143,14 @@ enum FiboRetrace {
     Retrace65=6,
     Retrace70=7,
     Retrace75=8,
-    Retrace80=9,
-    Retrace85=10,
-    Retrace90=11,
-    Retrace95=12,
+    Retrace77=9,
+    Retrace79=10,
+    Retrace81=11,
+    Retrace83=12,
     WholeRetrace=13,
-    Retrace105=14,
-    Retrace110=15,
-    Retrace115=16
+    Retrace87=14,
+    Retrace89=15,
+    Retrace91=16
 };
 
 double Fibo[] = {
@@ -157,14 +163,14 @@ double Fibo[] = {
     0.65,
     0.70,//whole
     0.75,
-    0.80,
+    0.77,
+    0.79,
+    0.81,
+    0.83,
     0.85,
-    0.90,
-    0.95,
-    1.0,
-    1.05,
-    1.1,
-    1.15
+    0.87,
+    0.89,
+    0.91
 };
 
 struct pairInfo {
@@ -181,6 +187,12 @@ struct pairInfo {
     int reservedOpositeBuys[1000];
     int reservedBuysCount;
     int reservedSellsCount;
+    int numBuys;
+    int numSells;
+    int enumeratedSells[1000];
+    int enumeratedBuys[1000];
+    int enumeratedSellsCount;
+    int enumeratedBuysCount;
 };
 
 static int TrailingInfo[gid_Panic + 1][LifePeriod + 1];
@@ -196,6 +208,8 @@ int updatePairInfoCache(string pairNamesCommaSeparated) {
     for (int i = 0; i < numPairs; ++i) {
         pairInfoCache[i].pairName = pairNames[i];
        
+       pairInfoCache[i].numBuys = getNumberOfBuys(pairInfoCache[i].pairName);
+       pairInfoCache[i].numSells = getNumberOfSells(pairInfoCache[i].pairName);
         pairInfoCache[i].buyLots = getVolBallance(pairInfoCache[i].pairName, OP_BUY);
         pairInfoCache[i].sellLots = getVolBallance(pairInfoCache[i].pairName, OP_SELL);
         pairInfoCache[i].netPosition =  pairInfoCache[i].buyLots  - pairInfoCache[i].sellLots;
@@ -205,12 +219,21 @@ int updatePairInfoCache(string pairNamesCommaSeparated) {
         pairInfoCache[i].numberOfLoosingBuys = getNumberOfLoosingBuys(pairInfoCache[i].pairName);
         pairInfoCache[i].numberOfLoosingSells = getNumberOfLoosingSells(pairInfoCache[i].pairName);
         matchLoosingTrades(pairInfoCache[i]);
+        enumerateTrades(pairInfoCache[i]);
     }
 
     if (beVerbose) {
         Print("*******     Pairs information *******");
         for (int i = 0; i < numPairs; ++i) {
             Print(i, ":", pairInfoCache[i].pairName, " information: ");
+            Print("Number of Buys:", pairInfoCache[i].numBuys, " Number of Sells:", pairInfoCache[i].numSells);
+            
+               for (int j = 0; j < pairInfoCache[i].enumeratedBuysCount; ++j)
+                   Print("enumeratedbuys[", j, "]=", pairInfoCache[i].enumeratedBuys[j]);           
+            
+                for (int j = 0; j < pairInfoCache[i].enumeratedSellsCount; ++j)
+                   Print("enumeratedSells[", j, "]=", pairInfoCache[i].enumeratedSells[j]);
+         
             Print("netPosition:", pairInfoCache[i].netPosition, " Buys:", pairInfoCache[i].buyLots, " Sells:", pairInfoCache[i].sellLots);
             Print("unsafeNetPosition:", pairInfoCache[i].unsafeNetPosition, " unsafeBuys:", pairInfoCache[i].unsafeBuys, " unsafeSells:", pairInfoCache[i].unsafeSells);
             Print("numberOfLoosingBuys:", pairInfoCache[i].numberOfLoosingBuys);
@@ -219,6 +242,7 @@ int updatePairInfoCache(string pairNamesCommaSeparated) {
             Print("numberOfLoosingSells:", pairInfoCache[i].numberOfLoosingSells);
             for (int j = 0; j < pairInfoCache[i].reservedBuysCount; ++j)
                 Print("reservedBuys[", j, "]=", pairInfoCache[i].reservedOpositeBuys[j]);
+                
         }
     }
 
@@ -295,15 +319,15 @@ double getARVHuristic(string tradeSymbol, int positionLifeTime) {
         return 1; // returning safe value because of error
     }
 
-    if (avrIndicatorValue < 0.3) { // is very steady
+    if (avrIndicatorValue < 0.2) { // is very steady
         return 0.7;
     }
 
-    if (avrIndicatorValue < 0.5) { // is normal
+    if (avrIndicatorValue < 0.65) { // is normal
         return 1;
     }
 
-    return 1.33; // is very volatile
+    return 1.2; // is very volatile
 }
 
 
@@ -384,6 +408,50 @@ void matchLoosingTrades(pairInfo & pairinfo) {
     }
     return;
 }
+
+//---------
+void enumerateTrades(pairInfo & pairinfo) {
+    int ticketFound = 0;
+    pairinfo.enumeratedSellsCount = 0;
+    double priceOfFoundTrade = 999999999;
+    for (int i = 0; i < pairinfo.numSells && ticketFound != -1; ++i) {
+        ticketFound = findHighestSell(pairinfo.pairName, priceOfFoundTrade);
+        if (ticketFound != -1) {
+            pairinfo.enumeratedSells[i] = ticketFound;
+            pairinfo.enumeratedSellsCount++;
+            if (OrderSelect(ticketFound, SELECT_BY_TICKET, MODE_TRADES)) {
+                priceOfFoundTrade = OrderOpenPrice();
+            } else {
+                Print("enumerateTrades:could not select ticket:", ticketFound, " breaking the search.");
+                break;
+            }
+        }
+    }
+
+    ticketFound = 0;
+    priceOfFoundTrade = 0;
+    pairinfo.enumeratedBuysCount = 0;
+    for (int i = 0; i < pairinfo.numBuys && ticketFound != -1; ++i) {
+        ticketFound = findLowestBuy(pairinfo.pairName, priceOfFoundTrade);
+        if (ticketFound != -1) {
+            pairinfo.enumeratedBuys[i] = ticketFound;
+            pairinfo.enumeratedBuysCount++;
+            if (OrderSelect(ticketFound, SELECT_BY_TICKET, MODE_TRADES)) {
+                priceOfFoundTrade = OrderOpenPrice();
+            }else {
+                Print("enumerateTrades:could not select ticket:", ticketFound, " breaking the search.");
+                break;
+            }
+        }
+    }
+    return;
+}
+
+
+//--------
+
+
+
 
 int getPairInfoIndex(string pairName) {
     for (int i = 0; i < pairsCount; ++i)
@@ -652,7 +720,7 @@ double priceTimeHeuristic(int tradeTicket, datetime orderOpenTime, GroupIds orde
     if(priceTimeRatio < 0.2 ) {  
     if( isReservedTrade(tradeTicket, symbol)) return 1.0;
     return 0.7; }
-    if(priceTimeRatio > 0.5)  return 1.25;
+    if(priceTimeRatio > 0.5)  return 1.2;
    
    return 1;
 }
@@ -666,7 +734,7 @@ double unsafeBalanceHeuristic(int ticketNumber, string symbol, int orderType, bo
     }
 
     if ((orderType == OP_BUY && pairInfoCache[pairIndex].unsafeNetPosition < 0) || (orderType == OP_SELL && pairInfoCache[pairIndex].unsafeNetPosition > 0)) {
-        return 1.33;
+        return 1.2;
     }
 
    if(tradeReservationEnabled && isReservedTrade(ticketNumber, symbol)) {
@@ -687,7 +755,7 @@ double balanceHeuristic(int ticketNumber, string symbol, int orderType, bool tra
     }
 
     if ((orderType == OP_BUY && pairInfoCache[pairIndex].netPosition < 0) || (orderType == OP_SELL && pairInfoCache[pairIndex].netPosition > 0)) {
-        return 1.5;
+        return 1.3;
     }
 
    if(tradeReservationEnabled && isReservedTrade(ticketNumber, symbol)) {
@@ -792,22 +860,22 @@ int priceCrossedTimes(double price, string symbol,  ENUM_TIMEFRAMES timeFrame, i
 
 double priceCrossHeuristic(int ticketNumber, string symbol, double orderOpenPrice, GroupIds tradeGroup) {
 
- Print(ticketNumber, "start hammer:");
+// Print(ticketNumber, "start hammer:");
    
     ENUM_TIMEFRAMES timeFrame = findStandardTimeFrameOf(TrailingInfo[tradeGroup][LifePeriod]);
    int crosses = priceCrossedTimes(orderOpenPrice, symbol, timeFrame, 7);
- Print("number of crosses is:", crosses);
+// Print("number of crosses is:", crosses);
   
    if(crosses > 4 ) {
-       return 1.15;
+       return 0.7;
       } 
 
    if(crosses > 3 ) {
-       return 1.1;
+       return 0.8;
       }   
       
    if(crosses > 2 ) {
-       return 1.05;
+       return 0.9;
       }   
 
    return 1; 
@@ -1026,6 +1094,37 @@ double getUnsafeSells(string symbol) {
     return balance;
 }
 
+int getNumberOfSells(string symbol) {
+    int count = 0;
+    int preserveTicket = OrderTicket();
+    for (int i = 0; i < OrdersTotal(); i++) {
+        if (OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
+            if (OrderSymbol() == symbol && OrderType() == OP_SELL) {
+               count ++;
+           }
+        }
+    }
+
+    bool bResult = OrderSelect(preserveTicket, SELECT_BY_TICKET, MODE_TRADES);
+    return count;
+}
+
+int getNumberOfBuys(string symbol) {
+    int count = 0;
+    int preserveTicket = OrderTicket();
+    for (int i = 0; i < OrdersTotal(); i++) {
+        if (OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
+            if (OrderSymbol() == symbol && OrderType() == OP_BUY) {
+               count ++;
+           }
+        }
+    }
+
+    bool bResult = OrderSelect(preserveTicket, SELECT_BY_TICKET, MODE_TRADES);
+    return count;
+}
+
+
 double getVolBallance(string symbol, int orderType = OP_SELL) {
     double balance = 0;
     int preserveTicket = OrderTicket();
@@ -1208,6 +1307,7 @@ double calcHuristics(int ticketNumber
                               , bool priceOverTimeHeuristic                            
                               , bool opositeLoosingTrades
                               , bool priceCrossHeuristicEnabled
+                              , bool consecutiveHeuristicEnabled
                               , bool panic) {
     double arvHeuVal = 1.0;
     double unsafeNetPosHeuVal = 1.0;
@@ -1216,7 +1316,8 @@ double calcHuristics(int ticketNumber
     double hammerHeuVal = 1.0;
     double dodgyHeuVal = 1.0;
     double priceTimeHeuVal = 1.0;
-    double priceCrossHeuVal= 1.0;
+    double priceCrossHeuVal = 1.0;
+    double consecutiveHeuVal = 1.0;
 
     GroupIds grpId = calculateGroupId(ticketNumber, magicNumber, opositeLoosingTrades, symbol);
 
@@ -1229,12 +1330,13 @@ double calcHuristics(int ticketNumber
     if (dodgyHeuristicEnabled) dodgyHeuVal = dodgyHeuristic(ticketNumber,symbol, ordertype, opositeLoosingTrades, grpId);
     if(priceOverTimeHeuristic && !panic) priceTimeHeuVal = priceTimeHeuristic(ticketNumber, openTime,grpId,openPrice,symbol);
     if(priceCrossHeuristicEnabled) priceCrossHeuVal = priceCrossHeuristic(ticketNumber,symbol, openPrice, grpId);
+    if(consecutiveHeuristicEnabled) consecutiveHeuVal = consecutivePositionHeuristic(ticketNumber, symbol);
     timeHeuVal = lifeTimeHeuristic(openTime, grpId);
     if(beVerbose) {
-    Print(ticketNumber, ": timeHeu:", timeHeuVal, " unsafeNetPosHeuVal:", unsafeNetPosHeuVal, " netPoseHeuVal:", netPosHeuVal);
+    Print(ticketNumber, ": timeHeu:", timeHeuVal, " unsafeNetPosHeuVal:", unsafeNetPosHeuVal, " netPoseHeuVal:", netPosHeuVal, " consecutiveHeuVal:", consecutiveHeuVal);
     Print(ticketNumber, ": ARVHeu:", arvHeuVal, " HammerVal:", hammerHeuVal, " DodgyVal:", dodgyHeuVal, " PriceOverTimeHeu:", priceTimeHeuVal, " PriceCrossHeu:", priceCrossHeuVal);
     }
-    return timeHeuVal * arvHeuVal * unsafeNetPosHeuVal * netPosHeuVal * priceTimeHeuVal * hammerHeuVal * dodgyHeuVal * priceCrossHeuVal;
+    return timeHeuVal * arvHeuVal * unsafeNetPosHeuVal * netPosHeuVal * priceTimeHeuVal * hammerHeuVal * dodgyHeuVal * priceCrossHeuVal * consecutiveHeuVal;
 }
 
 
@@ -1251,13 +1353,46 @@ bool isReservedTrade(int tradeTicket, string symbol) {
 
 int inReservedTrades(int tradeTicket, string symbol) {
     int index = getPairInfoIndex(symbol);
-    if(index== -1) return false;
+    if(index== -1) return -1;
 
    int buyIndex = inArray(tradeTicket, pairInfoCache[index].reservedOpositeBuys, pairInfoCache[index].reservedBuysCount);
    if(buyIndex != -1) return buyIndex;
    
    return inArray(tradeTicket, pairInfoCache[index].reservedOpositeSells, pairInfoCache[index].reservedSellsCount);
 }
+
+//----------------------
+
+double consecutivePositionHeuristic(int tradeTicket, string symbol) {
+
+   if(isReservedTrade(tradeTicket, symbol)) return 1;
+   
+    int index = getPairInfoIndex(symbol);
+    if(index== -1) return 1;
+    
+   int buyIndex = inArray(tradeTicket, pairInfoCache[index].enumeratedBuys, pairInfoCache[index].enumeratedBuysCount);
+   if(buyIndex > -1) {
+    if(buyIndex > pairInfoCache[index].reservedSellsCount ) {
+    return MathPow(0.92, buyIndex - 1 - pairInfoCache[index].reservedSellsCount);
+    } else {
+      return 1;
+       }
+    }
+   
+   int sellIndex = inArray(tradeTicket, pairInfoCache[index].enumeratedSells, pairInfoCache[index].enumeratedSellsCount);
+   if(sellIndex > -1) {
+    if(sellIndex > pairInfoCache[index].reservedBuysCount ) {
+    return MathPow(0.92, sellIndex - 1 - pairInfoCache[index].reservedBuysCount);
+    } else {
+      return 1;
+    }
+   }
+   
+   return 1;
+   }
+
+//---------------------
+
 
 bool isInArray(int ticketTofind, int & ticketArray[], int arrayCount) {
     for (int i = 0; i < arrayCount; ++i)
@@ -1296,7 +1431,8 @@ void trailPosition(int orderTicket,
     bool dodgycandleHeuristic,
     bool priceOverTimeHeuristic,
     bool opositeLoosingTrades,
-    bool priceCrossHeuristicEnabled) {
+    bool priceCrossHeuristicEnabled,
+    bool ConsecutiveProfitHeuristicEnabled) {
     double pBid, pAsk, pp, pDiff, pRef, pStep, pRetraceTrail, pDirectTrail;
 
     if (!OrderSelect(orderTicket, SELECT_BY_TICKET, MODE_TRADES)) {
@@ -1322,6 +1458,7 @@ void trailPosition(int orderTicket,
                                                       , priceOverTimeHeuristic
                                                       , opositeLoosingTrades
                                                       , priceCrossHeuristicEnabled
+                                                      , ConsecutiveProfitHeuristicEnabled
                                                       ,panic);
 
     double RetraceValue = getCurrentRetrace(orderTicket, tradeGroupId, continueLifeTimeAfterFirstSL, panic, heuristics, OrderSymbol(), OrderStopLoss());

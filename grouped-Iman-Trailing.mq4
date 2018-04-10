@@ -1,7 +1,7 @@
 // simple trailing stop
 #property copyright "Iman Dezfuly"
 #property link      "http://www.Iman.ir"
-#define version      "20180407"
+#define version      "20180408"
 #include "./desphilboy.mqh"
 
 extern bool ManageAllPairs = true;
@@ -11,8 +11,8 @@ TrailingStopS = 800, TrailingStopVS = 700, TrailingStopUS = 600, TrailingStopI =
 extern int TrailingStepUL = 80, TrailingStepVL = 80, TrailingStepL = 70, TrailingStepM = 70,
 TrailingStepS = 70, TrailingStepVS = 60, TrailingStepUS = 60, TrailingStepI = 60;
 
-extern FiboRetrace RetraceFactorUL = Retrace105, RetraceFactorVL = WholeRetrace, RetraceFactorL = Retrace95, RetraceFactorM = Retrace90,
-RetraceFactorS = Retrace85, RetraceFactorVS = Retrace80, RetraceFactorUS = Retrace75, RetraceFactorI = Retrace70;
+extern FiboRetrace RetraceFactorUL = Retrace87, RetraceFactorVL = WholeRetrace, RetraceFactorL = Retrace83, RetraceFactorM = Retrace81,
+RetraceFactorS = Retrace79, RetraceFactorVS = Retrace77, RetraceFactorUS = Retrace75, RetraceFactorI = Retrace70;
 
 extern LifeTimes TimeFrameUL = FiveDays, TimeFrameVL = ThreeDays, TimeFrameL = TwoDays, TimeFrameM = OneDay,
 TimeFrameS = TwentyHours, TimeFrameVS = SixteenHours, TimeFrameUS = TwelveHours, TimeFrameI = EightHours;
@@ -45,6 +45,7 @@ extern bool HammerCandleHeuristic = true;
 extern bool DodgyCandleHeuroistics = true;
 extern bool PriceOverTimeHeuristic = true;
 extern bool PriceCrossedHeuristic = true;
+extern bool ConsecutiveProfitHeuristic = true;
 
 extern string AccountPairNames = "USDJPY,GBPJPY,EURJPY,USDCAD,AUDUSD,XAUUSD";
 extern bool DeletePositionsOfOtherPairs = false;
@@ -212,7 +213,8 @@ void start() {
                 , DodgyCandleHeuroistics
                 , PriceOverTimeHeuristic
                 , ReserveOpositeForLoosingPositions
-                , PriceCrossedHeuristic);
+                , PriceCrossedHeuristic
+                ,ConsecutiveProfitHeuristic);
             }
         }
     }

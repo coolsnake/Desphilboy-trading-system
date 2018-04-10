@@ -1,7 +1,7 @@
 // Desphilboy Position Creator
 #property copyright "Iman Dezfuly"
 #property link      "http://www.Iman.ir"
-#define version      "20180407"
+#define version      "20180408"
 
 #include "./desphilboy.mqh"
 
