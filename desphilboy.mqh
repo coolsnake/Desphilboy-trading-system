@@ -1,4 +1,4 @@
-//version  20180311
+//version  20180416
 // heaer file for desphilboy
 //+------------------------------------------------------------------+
 //|                                                   desphilboy.mqh |
@@ -161,16 +161,16 @@ double Fibo[] = {
     0.500,
     0.618,
     0.65,
-    0.70,//whole
-    0.75,
-    0.77,
-    0.79,
-    0.81,
-    0.83,
+    0.70,
+    0.72,
+    0.74,
+    0.76,
+    0.78,
+    0.80,
+    0.82, //whole
+    0.84,
     0.85,
-    0.87,
-    0.89,
-    0.91
+    0.855
 };
 
 struct pairInfo {
@@ -323,7 +323,7 @@ double getARVHuristic(string tradeSymbol, int positionLifeTime) {
         return 0.7;
     }
 
-    if (avrIndicatorValue < 0.65) { // is normal
+    if (avrIndicatorValue < 0.7) { // is normal
         return 1;
     }
 
@@ -662,8 +662,8 @@ double getCurrentRetrace(int tradeTicket, GroupIds orderGroup, bool lifePeriodEf
           if (beVerbose) Print(tradeTicket, ": Returning half a nprmal retrace for panic reserved ticket.");
         double reservingCoefficient =1;
         int reservedIndex = inReservedTrades(tradeTicket,symbol);
-        if( reservedIndex > -1) reservingCoefficient = 0.9 /(1 + reservedIndex);  
-        return Fibo[TrailingInfo[gid_UltraLongTerm][Retrace]] * 0.5 * heuristicsValue * reservingCoefficient ;
+        if( reservedIndex > 0 ) reservingCoefficient = MathPow(0.9, reservedIndex);  
+        return Fibo[TrailingInfo[gid_UltraLongTerm][Retrace]] * 0.65  * heuristicsValue * reservingCoefficient ;
     }
 
     if (TrailingInfo[orderGroup][LifePeriod] == PERIOD_CURRENT) {
@@ -713,14 +713,21 @@ double priceTimeHeuristic(int tradeTicket, datetime orderOpenTime, GroupIds orde
     
     if( timesLifeTimeElapsed < 3 ) return 1;  // the Heuristic is to prolong longer lasting trades, not intended to act on new trades
     
+    double ageCoef = 1 + 0.2 * (timesLifeTimeElapsed - 3 )/3;
+    
     int pipsProfit = getPipsProfit(orderOpenPrice, symbol);
     double timesTrailingStop = pipsProfit / TrailingInfo[orderGroupId][TrailingStop];
     double priceTimeRatio= (timesTrailingStop / timesLifeTimeElapsed);
     
     if(priceTimeRatio < 0.2 ) {  
-    if( isReservedTrade(tradeTicket, symbol)) return 1.0;
-    return 0.7; }
-    if(priceTimeRatio > 0.5)  return 1.2;
+      if( isReservedTrade(tradeTicket, symbol)) {
+         return 1.0;
+      } else { 
+         return 0.7 * ageCoef;
+          }
+    }
+    
+    if(priceTimeRatio > 0.5)  return 1.2 * ageCoef;
    
    return 1;
 }
@@ -755,7 +762,7 @@ double balanceHeuristic(int ticketNumber, string symbol, int orderType, bool tra
     }
 
     if ((orderType == OP_BUY && pairInfoCache[pairIndex].netPosition < 0) || (orderType == OP_SELL && pairInfoCache[pairIndex].netPosition > 0)) {
-        return 1.3;
+        return 1.2;
     }
 
    if(tradeReservationEnabled && isReservedTrade(ticketNumber, symbol)) {
@@ -860,25 +867,15 @@ int priceCrossedTimes(double price, string symbol,  ENUM_TIMEFRAMES timeFrame, i
 
 double priceCrossHeuristic(int ticketNumber, string symbol, double orderOpenPrice, GroupIds tradeGroup) {
 
-// Print(ticketNumber, "start hammer:");
    
-    ENUM_TIMEFRAMES timeFrame = findStandardTimeFrameOf(TrailingInfo[tradeGroup][LifePeriod]);
-   int crosses = priceCrossedTimes(orderOpenPrice, symbol, timeFrame, 7);
-// Print("number of crosses is:", crosses);
+    ENUM_TIMEFRAMES timeFrame =PERIOD_D1;
+   int crosses = priceCrossedTimes(orderOpenPrice, symbol, timeFrame, 11);
   
-   if(crosses > 4 ) {
-       return 0.7;
+   if(crosses <2 ) {
+       return 1;
       } 
 
-   if(crosses > 3 ) {
-       return 0.8;
-      }   
-      
-   if(crosses > 2 ) {
-       return 0.9;
-      }   
-
-   return 1; 
+ return MathPow(0.9, crosses-1);
 }
 
 
