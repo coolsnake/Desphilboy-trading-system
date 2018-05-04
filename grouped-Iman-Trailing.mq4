@@ -11,8 +11,8 @@ TrailingStopS = 800, TrailingStopVS = 700, TrailingStopUS = 600, TrailingStopI =
 extern int TrailingStepUL = 80, TrailingStepVL = 80, TrailingStepL = 70, TrailingStepM = 70,
 TrailingStepS = 70, TrailingStepVS = 60, TrailingStepUS = 60, TrailingStepI = 60;
 
-extern FiboRetrace RetraceFactorUL = Retrace87, RetraceFactorVL = WholeRetrace, RetraceFactorL = Retrace83, RetraceFactorM = Retrace81,
-RetraceFactorS = Retrace79, RetraceFactorVS = Retrace77, RetraceFactorUS = Retrace75, RetraceFactorI = Retrace70;
+extern FiboRetrace RetraceFactorUL = Retrace80, RetraceFactorVL = Retrace76, RetraceFactorL = Retrace74, RetraceFactorM = Retrace72,
+RetraceFactorS = Retrace70, RetraceFactorVS = Retrace65, RetraceFactorUS = RetraceMax, RetraceFactorI = Retrace60;
 
 extern LifeTimes TimeFrameUL = FiveDays, TimeFrameVL = ThreeDays, TimeFrameL = TwoDays, TimeFrameM = OneDay,
 TimeFrameS = TwentyHours, TimeFrameVS = SixteenHours, TimeFrameUS = TwelveHours, TimeFrameI = EightHours;
@@ -20,7 +20,7 @@ extern bool ContinueLifeTimeAfterFirstSL = true;
 extern ENUM_TIMEFRAMES PanicTimeFrame = PERIOD_M15;
 extern int PanicPIPS = 1000;
 extern int PanicStop = 50;
-extern FiboRetrace PanicRetrace = PaniclyRetrace;
+extern FiboRetrace PanicRetrace = RetracePanic;
 extern bool SpikeTrading = true;
 extern int SpikeHeight = 1500;
 extern Groups SpikeTradesGroup = UltraLongTerm;

@@ -35,6 +35,8 @@
 #define LONGARVAVERAGECANDLES  17
 #define SHORTARVAVERAGECANDLES  4
 
+#define CASCADING_CONST 0.9    // this constant is used in multiple times multiplication for reducing retrace and stop values
+
 enum Groups {
     NoGroup = 0,
     UltraLongTerm=ULTRALONGTERMGROUP,
@@ -134,23 +136,26 @@ enum LifeTimes {
 
 // fibonacci
 enum FiboRetrace {
-    NoRetrace = 0,
-    PaniclyRetrace = 1,
-    MinRetrace = 2,
-    LowRetrace = 3,
-    HalfRetrace = 4,
-    MaxRetrace = 5,
-    Retrace65=6,
-    Retrace70=7,
-    Retrace75=8,
-    Retrace77=9,
-    Retrace79=10,
-    Retrace81=11,
-    Retrace83=12,
-    WholeRetrace=13,
-    Retrace87=14,
-    Retrace89=15,
-    Retrace91=16
+    Retrace0 = 0,
+    RetracePanic = 1,
+    RetraceMin = 2,
+    RetraceLow = 3,
+    Retrace45 = 4,
+    RetraceHalf = 5,
+    Retrace55 = 6, 
+    Retrace60 = 7,
+    RetraceMax = 8,
+    Retrace65= 9,
+    Retrace70= 10,
+    Retrace72= 11,
+    Retrace74= 12,
+    Retrace76= 13,
+    Retrace78= 14,
+    Retrace80= 15,
+    Retrace82= 16,
+    Retrace87= 17,
+    Retrace89= 18,
+    Retrace91= 19
 };
 
 double Fibo[] = {
@@ -158,7 +163,10 @@ double Fibo[] = {
     0.1,
     0.236,
     0.382,
+    0.45,
     0.500,
+    0.55,
+    0.6,
     0.618,
     0.65,
     0.70,
@@ -168,9 +176,9 @@ double Fibo[] = {
     0.78,
     0.80,
     0.82, //whole
-    0.84,
-    0.85,
-    0.855
+    0.87,
+    0.89,
+    0.91
 };
 
 struct pairInfo {
@@ -662,7 +670,7 @@ double getCurrentRetrace(int tradeTicket, GroupIds orderGroup, bool lifePeriodEf
           if (beVerbose) Print(tradeTicket, ": Returning half a nprmal retrace for panic reserved ticket.");
         double reservingCoefficient =1;
         int reservedIndex = inReservedTrades(tradeTicket,symbol);
-        if( reservedIndex > 0 ) reservingCoefficient = MathPow(0.9, reservedIndex);  
+        if( reservedIndex > 0 ) reservingCoefficient = MathPow(CASCADING_CONST, reservedIndex);  
         return Fibo[TrailingInfo[gid_UltraLongTerm][Retrace]] * 0.65  * heuristicsValue * reservingCoefficient ;
     }
 
@@ -875,7 +883,7 @@ double priceCrossHeuristic(int ticketNumber, string symbol, double orderOpenPric
        return 1;
       } 
 
- return MathPow(0.9, crosses-1);
+ return MathPow(CASCADING_CONST, crosses-1);
 }
 
 
@@ -1370,7 +1378,7 @@ double consecutivePositionHeuristic(int tradeTicket, string symbol) {
    int buyIndex = inArray(tradeTicket, pairInfoCache[index].enumeratedBuys, pairInfoCache[index].enumeratedBuysCount);
    if(buyIndex > -1) {
     if(buyIndex > pairInfoCache[index].reservedSellsCount ) {
-    return MathPow(0.92, buyIndex - 1 - pairInfoCache[index].reservedSellsCount);
+    return MathPow(CASCADING_CONST, buyIndex - 1 - pairInfoCache[index].reservedSellsCount);
     } else {
       return 1;
        }
@@ -1379,7 +1387,7 @@ double consecutivePositionHeuristic(int tradeTicket, string symbol) {
    int sellIndex = inArray(tradeTicket, pairInfoCache[index].enumeratedSells, pairInfoCache[index].enumeratedSellsCount);
    if(sellIndex > -1) {
     if(sellIndex > pairInfoCache[index].reservedBuysCount ) {
-    return MathPow(0.92, sellIndex - 1 - pairInfoCache[index].reservedBuysCount);
+    return MathPow(CASCADING_CONST, sellIndex - 1 - pairInfoCache[index].reservedBuysCount);
     } else {
       return 1;
     }
