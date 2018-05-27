@@ -183,6 +183,8 @@ double Fibo[] = {
 
 struct pairInfo {
     string pairName;
+    double trailingParamsCoefficient;
+    double timeParamsCoefficient;
     double netPosition;
     double unsafeNetPosition;
     double unsafeBuys;
@@ -207,17 +209,38 @@ static int TrailingInfo[gid_Panic + 1][LifePeriod + 1];
 static bool beVerbose = false;
 static pairInfo pairInfoCache [100];
 static int pairsCount = 0;
+string pairNames[100];
+string pairTimeParamsCoefficients[100];
+string pairTrailingParamsCoefficients[100];
+    
+int numPairs;
+int numTic;
+int numTrc;
+    
 
-
-int updatePairInfoCache(string pairNamesCommaSeparated) {
-    string pairNames[100];
-    int numPairs = StringSplit(pairNamesCommaSeparated, ',', pairNames);
+int updatePairInfoCache(string pairNamesCommaSeparated
+                        , string timeParamsCoefficientsCommaSeparated
+                        , string trailingParamsCoefficientsCommaSeparated) {   
+    
+     numPairs = StringSplit(pairNamesCommaSeparated, ',', pairNames);
+     if( numPairs < 1) {
+     numPairs = StringSplit(Symbol(), ',', pairNames);
+     }
+     
+     numTic = StringSplit(timeParamsCoefficientsCommaSeparated, ',', pairTimeParamsCoefficients);
+     numTrc = StringSplit(trailingParamsCoefficientsCommaSeparated, ',', pairTrailingParamsCoefficients);
 
     for (int i = 0; i < numPairs; ++i) {
         pairInfoCache[i].pairName = pairNames[i];
-       
-       pairInfoCache[i].numBuys = getNumberOfBuys(pairInfoCache[i].pairName);
-       pairInfoCache[i].numSells = getNumberOfSells(pairInfoCache[i].pairName);
+        
+        double timeCoef = i < numTic ? StrToDouble(pairTimeParamsCoefficients[i]) : 1.0;
+        pairInfoCache[i].timeParamsCoefficient = timeCoef > 0.05 ? timeCoef : 1.0;
+        
+        double trailCoef = i < numTrc ? StrToDouble(pairTrailingParamsCoefficients[i]) : 1.0;
+        pairInfoCache[i].trailingParamsCoefficient = trailCoef > 0.05 ? trailCoef : 1.0;
+         
+        pairInfoCache[i].numBuys = getNumberOfBuys(pairInfoCache[i].pairName);
+        pairInfoCache[i].numSells = getNumberOfSells(pairInfoCache[i].pairName);
         pairInfoCache[i].buyLots = getVolBallance(pairInfoCache[i].pairName, OP_BUY);
         pairInfoCache[i].sellLots = getVolBallance(pairInfoCache[i].pairName, OP_SELL);
         pairInfoCache[i].netPosition =  pairInfoCache[i].buyLots  - pairInfoCache[i].sellLots;
@@ -233,7 +256,8 @@ int updatePairInfoCache(string pairNamesCommaSeparated) {
     if (beVerbose) {
         Print("*******     Pairs information *******");
         for (int i = 0; i < numPairs; ++i) {
-            Print(i, ":", pairInfoCache[i].pairName, " information: ");
+            Print(i, ":", pairInfoCache[i].pairName,",", pairInfoCache[i].timeParamsCoefficient,",",pairInfoCache[i].trailingParamsCoefficient, " information: ");
+            
             Print("Number of Buys:", pairInfoCache[i].numBuys, " Number of Sells:", pairInfoCache[i].numSells);
             
                for (int j = 0; j < pairInfoCache[i].enumeratedBuysCount; ++j)
@@ -256,6 +280,29 @@ int updatePairInfoCache(string pairNamesCommaSeparated) {
 
     return numPairs;
 }
+
+
+int getTimeCoeficiented( string pairName,int minutes )
+{
+   int index = getPairInfoIndex(pairName);
+   if (index == -1 ) return minutes;
+   
+   double coeficient= pairInfoCache[index].timeParamsCoefficient; 
+   
+   return ((int) (coeficient * minutes));
+}
+
+
+int getTrailCoeficiented( string pairName, int points)
+{
+   int index = getPairInfoIndex(pairName);
+   if (index == -1 ) return points;
+   
+   double coeficient= pairInfoCache[index].trailingParamsCoefficient; 
+   
+   return ((int) (coeficient * points));
+}
+
 
 int getNumberOfLoosingBuys(string symbol) {
     int loosingBuysCounter = 0;
@@ -462,7 +509,7 @@ void enumerateTrades(pairInfo & pairinfo) {
 
 
 int getPairInfoIndex(string pairName) {
-    for (int i = 0; i < pairsCount; ++i)
+    for (int i = 0; i < numPairs; ++i)
         if (pairInfoCache[i].pairName == pairName) return i;
 
     return -1;
@@ -636,38 +683,38 @@ int getPositionsInRange(string symbol, int operation, double center, int PIPsMar
 int getCurrentTrailingStop(int tradeTicket, GroupIds orderGroup, bool lifePeriodEffectiveAlways, bool panic = false, double heuristicsValue = 1, string symbol="", double tradeStopLoss=0) {
 
      if (panic && !isReservedTrade(tradeTicket, symbol)) {
-        if (beVerbose) Print(tradeTicket, ": Returning a panic trailing stop: ", TrailingInfo[gid_Panic][TrailingStop] );
-        return TrailingInfo[gid_Panic][TrailingStop];
+        if (beVerbose) Print(symbol, ":", tradeTicket, ": Returning a panic trailing stop: ", getTrailCoeficiented(symbol,TrailingInfo[gid_Panic][TrailingStop]));
+        return getTrailCoeficiented(symbol,TrailingInfo[gid_Panic][TrailingStop]);
     }
 
     if (panic && isReservedTrade(tradeTicket, symbol)) {
-        if (beVerbose) Print(tradeTicket, ": Returning half a nprmal trailing stop for panic reserved ticket: ", TrailingInfo[gid_UltraLongTerm][TrailingStop] * 0.5 * heuristicsValue);
-        return (int) (TrailingInfo[gid_UltraLongTerm][TrailingStop] * 0.5 * heuristicsValue);
+        if (beVerbose) Print(symbol, ":", tradeTicket, ": Returning half a nprmal trailing stop for panic reserved ticket: ", getTrailCoeficiented(symbol, TrailingInfo[gid_UltraLongTerm][TrailingStop]) * 0.5 * heuristicsValue);
+        return (int) (getTrailCoeficiented(symbol, TrailingInfo[gid_UltraLongTerm][TrailingStop]) * 0.5 * heuristicsValue);
     }
     
     if (TrailingInfo[orderGroup][LifePeriod] == PERIOD_CURRENT) {
-        return TrailingInfo[orderGroup][TrailingStop];
+        return getTrailCoeficiented(symbol, TrailingInfo[orderGroup][TrailingStop]);
     }
 
     if (tradeStopLoss != 0 && !lifePeriodEffectiveAlways) {
-        if (beVerbose) Print(tradeTicket, ": Active calculation not effective after first stop loss, returning constant trailing stop");
-        return TrailingInfo[orderGroup][TrailingStop];
+        if (beVerbose) Print(symbol, ":", tradeTicket, ": Active calculation not effective after first stop loss, returning constant trailing stop");
+        return getTrailCoeficiented(symbol, TrailingInfo[orderGroup][TrailingStop]);
     }
 
-    int orderTrailingStop = (int)(TrailingInfo[orderGroup][TrailingStop] * heuristicsValue);
-    if (beVerbose) Print(tradeTicket, ": Factor is:", heuristicsValue, " ,Order Trailing Stop  is: ", orderTrailingStop);
+    int orderTrailingStop = (int) (getTrailCoeficiented(symbol, TrailingInfo[orderGroup][TrailingStop]) * heuristicsValue);
+    if (beVerbose) Print(symbol, ":", tradeTicket, ": Factor is:", heuristicsValue, " ,NocoefTrailing:",(int) (heuristicsValue * TrailingInfo[orderGroup][TrailingStop]), " ,Order Trailing Stop  is: ", orderTrailingStop);
     return orderTrailingStop;
 }
 
 double getCurrentRetrace(int tradeTicket, GroupIds orderGroup, bool lifePeriodEffectiveAlways, bool panic = false, double heuristicsValue = 1, string symbol="", double tradeStopLoss=0) {
 
     if (panic && !isReservedTrade(tradeTicket, symbol)) {
-        if (beVerbose) Print(tradeTicket, ": Returning a panic trailing stop. ");
+        if (beVerbose) Print(symbol, ":", tradeTicket, ": Returning a panic trailing stop. ");
         return Fibo[TrailingInfo[gid_Panic][Retrace]];
     }
 
     if (panic && isReservedTrade(tradeTicket,symbol)) {
-          if (beVerbose) Print(tradeTicket, ": Returning half a nprmal retrace for panic reserved ticket.");
+          if (beVerbose) Print(symbol, ":", tradeTicket, ": Returning half a nprmal retrace for panic reserved ticket.");
         double reservingCoefficient =1;
         int reservedIndex = inReservedTrades(tradeTicket,symbol);
         if( reservedIndex > 0 ) reservingCoefficient = MathPow(CASCADING_CONST, reservedIndex);  
@@ -685,19 +732,31 @@ double getCurrentRetrace(int tradeTicket, GroupIds orderGroup, bool lifePeriodEf
     }
 
     double orderRetrace = (Fibo[TrailingInfo[orderGroup][Retrace]] * heuristicsValue);
-    if (beVerbose) Print(tradeTicket,": Factor is:", heuristicsValue, " , Retrace is: ", orderRetrace);
+    if (beVerbose) Print(symbol, ":", tradeTicket,": Factor is:", heuristicsValue, " , Retrace is: ", orderRetrace);
     return orderRetrace;
 }
 
 
-double lifeTimeHeuristic(datetime orderOpenTime, GroupIds orderGroupId) {
+double lifeTimeHeuristic(datetime orderOpenTime, GroupIds orderGroupId, string symbol) {
     double minutesElapsed = getMinutesOld(orderOpenTime);
-    double lifeTimeInMinutes = TrailingInfo[orderGroupId][LifePeriod];
+    double lifeTimeInMinutes = getTimeCoeficiented(symbol, TrailingInfo[orderGroupId][LifePeriod]);
+    
+     if( beVerbose ) {
+      Print("lifeTimeHeu:NoCoeflifeTimeInMinutes:", TrailingInfo[orderGroupId][LifePeriod], " ,lifeTimeInMinutes:", lifeTimeInMinutes);
+    }
     
    if (lifeTimeInMinutes == 0) {
         lifeTimeInMinutes = 30;
     } // prevent divide by zero
     double timesLifeTimeElapsed = (minutesElapsed / lifeTimeInMinutes);
+     if( beVerbose ) {
+      double nocoefLifeTimeInMinutes = TrailingInfo[orderGroupId][LifePeriod];
+      double nocoeftimeslifetimeelapsed = minutesElapsed / nocoefLifeTimeInMinutes;
+      double nocoeflifetimeheu = 1/(1 + 0.5 * nocoeftimeslifetimeelapsed * nocoeftimeslifetimeelapsed);
+      
+      Print("lifeTimeHeu:NoCoeflifeTimeHeu:", nocoeflifetimeheu, " ,lifeTimeHeu:", 1 / (1 + 0.5 * timesLifeTimeElapsed * timesLifeTimeElapsed));
+    }
+    
     return 1 / (1 + 0.5 * timesLifeTimeElapsed * timesLifeTimeElapsed);
 }
 
@@ -713,7 +772,11 @@ int getPipsProfit(double orderOpenPrice, string symbol) {
 
 double priceTimeHeuristic(int tradeTicket, datetime orderOpenTime, GroupIds orderGroupId, double orderOpenPrice, string symbol) {
     double minutesElapsed = getMinutesOld(orderOpenTime);
-    double lifeTimeInMinutes = TrailingInfo[orderGroupId][LifePeriod];
+    double lifeTimeInMinutes = getTimeCoeficiented(symbol, TrailingInfo[orderGroupId][LifePeriod]);
+    
+    if( beVerbose ) {
+      Print("priceTimeHeuristic:NoCoeflifeTimeInMinutes:", TrailingInfo[orderGroupId][LifePeriod], " ,lifeTimeInMinutes:", lifeTimeInMinutes);
+    }
     
      if (lifeTimeInMinutes == 0)  return 1;   // no need to proceed
     
@@ -724,7 +787,7 @@ double priceTimeHeuristic(int tradeTicket, datetime orderOpenTime, GroupIds orde
     double ageCoef = 1 + 0.2 * (timesLifeTimeElapsed - 3 )/3;
     
     int pipsProfit = getPipsProfit(orderOpenPrice, symbol);
-    double timesTrailingStop = pipsProfit / TrailingInfo[orderGroupId][TrailingStop];
+    double timesTrailingStop = pipsProfit / getTrailCoeficiented(symbol, TrailingInfo[orderGroupId][TrailingStop]);
     double priceTimeRatio= (timesTrailingStop / timesLifeTimeElapsed);
     
     if(priceTimeRatio < 0.2 ) {  
@@ -803,7 +866,6 @@ double hammerness(string symbol, ENUM_TIMEFRAMES timeFrame, int shift) {
    double lowertail = MathMin(iOpen(symbol, timeFrame, shift), iClose(symbol,timeFrame,shift)) - iLow(symbol, timeFrame, shift) ;
    double uppertail =  iHigh(symbol, timeFrame, shift) - MathMax(iOpen(symbol, timeFrame, shift), iClose(symbol,timeFrame,shift)) ;
      
-    //  Print("lowerTail:", lowertail, " UpperTail:", uppertail);
     double bullishness = (lowertail - uppertail) / candleMovement;
    
    double bullishnessFactor = bullishness > 5 ? 1: (bullishness < -5 ? -1 : 0); 
@@ -814,37 +876,31 @@ double hammerness(string symbol, ENUM_TIMEFRAMES timeFrame, int shift) {
 
 double dodginess(string symbol, ENUM_TIMEFRAMES timeFrame, int shift) {
     double average100 = averageCandleMaxMinLength(symbol, timeFrame, 100);
-   // Print("average100=",average100);
+
    if(average100 == 0) return 0;  //avoid divide by 0
    
    double relationalStrength = (iHigh(symbol,timeFrame,shift) - iLow(symbol,timeFrame,shift))/average100;
-   // Print("relationalStrength:", relationalStrength);
+
    if(relationalStrength == 0) return 0;  //candle is very weak, or error,avoid divide by 0
    
    double averageVol =(double) (iVolume(symbol, timeFrame, shift +1) + iVolume( symbol, timeFrame, shift + 2) + iVolume( symbol, timeFrame, shift + 3) + iVolume( symbol, timeFrame, shift + 4))/4;
-   // Print("averageVol:", averageVol);
+
     if(averageVol == 0) return 0;  //avoid divide by 0
     
     double relationalVolume =  iVolume( symbol, timeFrame, shift)/averageVol;
-    // Print("Relational volume:", relationalVolume);
     
     double candleMovement = MathAbs(iClose(symbol, timeFrame, shift) - iOpen(symbol, timeFrame, shift));
     if(candleMovement == 0) candleMovement = 0.001;   // put a minimum to avoid divide by zero
-    // Print("Candle movement:", candleMovement);
+    
     double concentration = MathMin(5, MathAbs((relationalStrength * average100)/candleMovement));
-    // Print("Concentration:", concentration);
     
     return concentration * MathPow(relationalVolume, 2) * MathPow(relationalStrength,2); 
 }
 
 
 double hammerHeuristic(int ticketNumber, string symbol, int orderType, bool tradeReservationEnabled, GroupIds tradeGroup) {
-
-// Print(ticketNumber, "start hammer:");
-   
-    ENUM_TIMEFRAMES timeFrame = findStandardTimeFrameOf(TrailingInfo[tradeGroup][LifePeriod]);
+   ENUM_TIMEFRAMES timeFrame = findStandardTimeFrameOf(getTimeCoeficiented(symbol,TrailingInfo[tradeGroup][LifePeriod]));
    double effectiveHammerness = hammerness(symbol, timeFrame, 1);
-   // Print("effectiveHammerness:", effectiveHammerness);
   
    if(effectiveHammerness > 6 ) {
       if(orderType == OP_SELL ) return 0.75;
@@ -863,8 +919,12 @@ double hammerHeuristic(int ticketNumber, string symbol, int orderType, bool trad
 int priceCrossedTimes(double price, string symbol,  ENUM_TIMEFRAMES timeFrame, int numberOfCandleSticks) {
    int sumOfCrosses =  0;
    
+   const int pointsApproximation= 200;
+   double pointValue =MarketInfo(symbol, MODE_POINT);
+   double approximation = pointsApproximation * pointValue;
+   
    for( int i =0; i< numberOfCandleSticks; ++i) {
-    if(price < iHigh(symbol, timeFrame, i) && price > iLow(symbol, timeFrame, i)) { 
+    if(price < iHigh(symbol, timeFrame, i) + approximation && price > iLow(symbol, timeFrame, i) - approximation ) { 
      sumOfCrosses++;
     }
    }
@@ -892,11 +952,8 @@ double priceCrossHeuristic(int ticketNumber, string symbol, double orderOpenPric
 
 
 double dodgyHeuristic(int ticketNumber, string symbol, int orderType, bool tradeReservationEnabled, GroupIds tradeGroup) {
-
-// Print("Start dodgy:");
-   ENUM_TIMEFRAMES timeFrame = findStandardTimeFrameOf(TrailingInfo[tradeGroup][LifePeriod]);
+   ENUM_TIMEFRAMES timeFrame = findStandardTimeFrameOf(getTimeCoeficiented(symbol, TrailingInfo[tradeGroup][LifePeriod]));
    double effectiveDodginess = dodginess(symbol, timeFrame, 1) * candleSign(symbol,timeFrame, 2);
-   // Print(" effective dodginess:", effectiveDodginess);
 
    if(effectiveDodginess > 6 && orderType == OP_SELL ) return 0.75;
    
@@ -1024,7 +1081,6 @@ bool CreateBuysCondition(string pairname, int spikePIPs, double maxLots, double 
     int pairIndex = getPairInfoIndex(pairname);
 
     if(pairIndex == -1) {
-        Print("CreateBuysCondition: could not find index for ", pairname);
         return false;
     }
 
@@ -1326,7 +1382,7 @@ double calcHuristics(int ticketNumber
 
     GroupIds grpId = calculateGroupId(ticketNumber, magicNumber, opositeLoosingTrades, symbol);
 
-    int lifetime = TrailingInfo[grpId][LifePeriod];
+    int lifetime = getTimeCoeficiented(symbol, TrailingInfo[grpId][LifePeriod]);
 
     if (arvHeuristic) arvHeuVal = getARVHuristic(symbol, lifetime);
     if (unsafeNetPositionsHeuristic) unsafeNetPosHeuVal = unsafeBalanceHeuristic(ticketNumber,symbol, ordertype, opositeLoosingTrades);
@@ -1336,10 +1392,10 @@ double calcHuristics(int ticketNumber
     if(priceOverTimeHeuristic && !panic) priceTimeHeuVal = priceTimeHeuristic(ticketNumber, openTime,grpId,openPrice,symbol);
     if(priceCrossHeuristicEnabled) priceCrossHeuVal = priceCrossHeuristic(ticketNumber,symbol, openPrice, grpId);
     if(consecutiveHeuristicEnabled) consecutiveHeuVal = consecutivePositionHeuristic(ticketNumber, symbol);
-    timeHeuVal = lifeTimeHeuristic(openTime, grpId);
+    timeHeuVal = lifeTimeHeuristic(openTime, grpId, symbol);
     if(beVerbose) {
-    Print(ticketNumber, ": timeHeu:", timeHeuVal, " unsafeNetPosHeuVal:", unsafeNetPosHeuVal, " netPoseHeuVal:", netPosHeuVal, " consecutiveHeuVal:", consecutiveHeuVal);
-    Print(ticketNumber, ": ARVHeu:", arvHeuVal, " HammerVal:", hammerHeuVal, " DodgyVal:", dodgyHeuVal, " PriceOverTimeHeu:", priceTimeHeuVal, " PriceCrossHeu:", priceCrossHeuVal);
+    Print(symbol, ":", ticketNumber, ": timeHeu:", timeHeuVal, " unsafeNetPosHeuVal:", unsafeNetPosHeuVal, " netPoseHeuVal:", netPosHeuVal, " consecutiveHeuVal:", consecutiveHeuVal);
+    Print(symbol, ":", ticketNumber, ": ARVHeu:", arvHeuVal, " HammerVal:", hammerHeuVal, " DodgyVal:", dodgyHeuVal, " PriceOverTimeHeu:", priceTimeHeuVal, " PriceCrossHeu:", priceCrossHeuVal);
     }
     return timeHeuVal * arvHeuVal * unsafeNetPosHeuVal * netPosHeuVal * priceTimeHeuVal * hammerHeuVal * dodgyHeuVal * priceCrossHeuVal * consecutiveHeuVal;
 }
@@ -1415,7 +1471,7 @@ GroupIds calculateGroupId(int tradeTicket, int magicNumber, bool opositeReserveE
    GroupIds realGroup=getGroupId(magicNumber);
 
     if (opositeReserveEnabled && isReservedTrade(tradeTicket, symbol) && realGroup >= gid_UltraLongTerm) {
-    if(beVerbose) Print(tradeTicket, " is reserved, real group is ",realGroup," calculated group is UltraLongTerm");
+    if(beVerbose) Print(symbol, ":", tradeTicket, " is reserved, real group is ",realGroup," calculated group is UltraLongTerm");
     
     return gid_UltraLongTerm;
     }
@@ -1440,11 +1496,11 @@ void trailPosition(int orderTicket,
     bool ConsecutiveProfitHeuristicEnabled) {
     double pBid, pAsk, pp, pDiff, pRef, pStep, pRetraceTrail, pDirectTrail;
 
-    if (!OrderSelect(orderTicket, SELECT_BY_TICKET, MODE_TRADES)) {
-        Print("could not access order ", orderTicket, " in trailPosition function");
-        return;
-    }
-
+   if( !isDesphilboy(OrderMagicNumber())) {
+      Print("Skipping order ", OrderTicket(), " because is not a Desphilboy System trade.");
+      return;
+   }
+   
     GroupIds tradeGroupId = calculateGroupId(orderTicket, OrderMagicNumber(), opositeLoosingTrades, OrderSymbol());
 
     bool panic = isPanic(OrderSymbol(), panicTimeFrame, panicPIPS);
@@ -1453,8 +1509,8 @@ void trailPosition(int orderTicket,
                                                       , OrderSymbol()
                                                       , OrderType()
                                                       , OrderMagicNumber()
-                                                      ,OrderOpenTime()
-                                                      ,OrderOpenPrice()
+                                                      , OrderOpenTime()
+                                                      , OrderOpenPrice()
                                                       , arvHeuristic
                                                       , unsafeNetPositionsHeuristic
                                                       , netPositionsHeuristic
@@ -1472,7 +1528,7 @@ void trailPosition(int orderTicket,
    
     pp = MarketInfo(OrderSymbol(), MODE_POINT);
     pDirectTrail = TrailingStop * pp;
-    pStep = TrailingInfo[tradeGroupId][Step] * pp;
+    pStep = getTrailCoeficiented(OrderSymbol(),TrailingInfo[tradeGroupId][Step]) * pp;
 
     if (OrderType() == OP_BUY) {
         pBid = MarketInfo(OrderSymbol(), MODE_BID);

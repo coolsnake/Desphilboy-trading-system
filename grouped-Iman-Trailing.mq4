@@ -1,7 +1,7 @@
 // simple trailing stop
 #property copyright "Iman Dezfuly"
 #property link      "http://www.Iman.ir"
-#define version      "20180416"
+#define version      "201805/29"
 #include "./desphilboy.mqh"
 
 extern bool ManageAllPairs = true;
@@ -48,6 +48,8 @@ extern bool PriceCrossedHeuristic = true;
 extern bool ConsecutiveProfitHeuristic = true;
 
 extern string AccountPairNames = "USDJPY,GBPJPY,EURJPY,USDCAD,AUDUSD,XAUUSD";
+extern string TimeParamsCoefficientsForPairs = "1.0,1.0,1.0,1.0,1.0,1.0";
+extern string TrailingParamsCoefficientsForPairs = "1.0,1.0,1.0,1.0,1.0,1.0";
 extern bool DeletePositionsOfOtherPairs = false;
 
 extern int TimerSeconds = 10;
@@ -120,11 +122,10 @@ int init() {
     Print("steps(UL,VL,L,M,S,VS,US,I):", TrailingStepUL, ",", TrailingStepVL, ",", TrailingStepL, ",", TrailingStepM, ",", TrailingStepS, ",", TrailingStepVS, ",", TrailingStepUS, ",", TrailingStepI);
     Print("Retraces(UL,VL,L,M,S,VS,US,I):", Fibo[RetraceFactorUL], ",", Fibo[RetraceFactorVL], ",", Fibo[RetraceFactorL], ",", Fibo[RetraceFactorM], ",", Fibo[RetraceFactorS], ",", Fibo[RetraceFactorVS], ",", Fibo[RetraceFactorUS], ",", Fibo[RetraceFactorI]);
     Print("LifeTimes(UL,VL,L,M,S,VS,US,I):", TimeFrameUL, ",", TimeFrameVL, ",", TimeFrameL, ",", TimeFrameM, ",", TimeFrameS, ",", TimeFrameVS, ",", TimeFrameUS, ",", TimeFrameI);
-
-    string pairNames[100];
-    int numPairs = StringSplit(AccountPairNames, ',', pairNames);
+    
+    updatePairInfoCache(AccountPairNames,TimeParamsCoefficientsForPairs,TrailingParamsCoefficientsForPairs);
     for (int i = 0; i < numPairs; ++i) {
-        Print("Pair ", i, " name is: ", pairNames[i]);
+        Print("Pair ", i, " name is: ", pairNames[i]," ,Time Coefficient: ", pairInfoCache[i].timeParamsCoefficient," ,Trail Coefficient: ", pairInfoCache[i].trailingParamsCoefficient);
     }
 
     fillTrailingInfo(TrailingInfo);
@@ -143,16 +144,6 @@ void OnTimer() {
     }
 
     if (ActiveTrading && (loopCounter % 20) == 0) {
-
-        string pairNames[100];
-        int numPairs = 0;
-
-        if (ManageAllPairs) {
-            numPairs = StringSplit(AccountPairNames, ',', pairNames);
-        } else {
-            numPairs = 1;
-            pairNames[0] = Symbol();
-        }
 
         for (int i = 0; i < numPairs; ++i) {
             if (CreateBuysCondition(pairNames[i], ActiveTradingGap, MaximumNetPositions * ActiveAndSpikeLots, MaximumAbsolutePositions * ActiveAndSpikeLots)) {
@@ -175,8 +166,7 @@ void OnTimer() {
     }
 
     if (ShowVolumeBallances) {
-        string pairNames[100];
-        int numPairs = StringSplit(AccountPairNames, ',', pairNames);
+        
         for (int i = 0; i < numPairs; ++i) {
             Print("Volume of all sells for ", pairNames[i], " is:", getVolBallance(pairNames[i], OP_SELL));
             Print("Volume of all sellstops for ", pairNames[i], " is:", getVolBallance(pairNames[i], OP_SELLSTOP));
@@ -197,12 +187,12 @@ void OnTimer() {
 //+------------------------------------------------------------------+
 void start() {
     if(loopCounter % 23 == 0) {
-      pairsCount = updatePairInfoCache(AccountPairNames);   
+      updatePairInfoCache(AccountPairNames,TimeParamsCoefficientsForPairs,TrailingParamsCoefficientsForPairs);   
     }
 
     for (int i = 0; i < OrdersTotal(); i++) {
         if (OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
-            if ((ManageAllPairs || OrderSymbol() == Symbol()) && (OrderType() == OP_BUY || OrderType() == OP_SELL)) {
+            if ((ManageAllPairs || getPairInfoIndex(OrderSymbol())!= -1) && (OrderType() == OP_BUY || OrderType() == OP_SELL)) {
                 trailPosition(OrderTicket()
                 , ContinueLifeTimeAfterFirstSL
                 , PanicTimeFrame, PanicPIPS
@@ -220,16 +210,7 @@ void start() {
     }
 
     if (ActiveTrading && (loopCounter % MAHMARAZA_RAHVARA_ID) == 0) {
-        string pairNames[100];
-        int numPairs = 0;
-
-        if (ManageAllPairs) {
-            numPairs = StringSplit(AccountPairNames, ',', pairNames);
-        } else {
-            numPairs = 1;
-            pairNames[0] = Symbol();
-        }
-
+       
         for (int i = 0; i < numPairs; ++i) {
             if (CreateBuysCondition(pairNames[i], ActiveTradingGap, MaximumNetPositions * ActiveAndSpikeLots, MaximumAbsolutePositions * ActiveAndSpikeLots)) {
                 Print("Creating active trading buystops on ", pairNames[i]);
@@ -257,15 +238,6 @@ void start() {
 
 
     if (SpikeTrading) {
-        string pairNames[100];
-        int numPairs = 0;
-
-        if (ManageAllPairs) {
-            numPairs = StringSplit(AccountPairNames, ',', pairNames);
-        } else {
-            numPairs = 1;
-            pairNames[0] = Symbol();
-        }
 
         for (int i = 0; i < numPairs; ++i) {
             if (isPanic(pairNames[i], SpikeTimeFrame, SpikeHeight)) {
