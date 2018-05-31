@@ -1,7 +1,7 @@
 // Desphilboy Position Creator
 #property copyright "Iman Dezfuly"
 #property link      "http://www.Iman.ir"
-#define version      "20180529"
+#define version      "20180530"
 
 #include "./desphilboy.mqh"
 
@@ -24,7 +24,7 @@ extern bool CreateSells = true;
 extern double BuyStartingPrice = 0.0;
 extern double SellStartingPrice = 0.0;
 
-extern int TradesDistance = 180;
+extern int TradesDistance = 200;
 
 extern string PIPsToStartI = "8,16";
 extern string PIPsToStartUS = "7,15";
