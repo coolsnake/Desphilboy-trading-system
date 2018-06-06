@@ -35,7 +35,14 @@
 #define LONGARVAVERAGECANDLES  17
 #define SHORTARVAVERAGECANDLES  4
 
-#define CASCADING_CONST 0.9    // this constant is used in multiple times multiplication for reducing retrace and stop values
+   // these constants are used in times multiplication for reducing or increasing values
+#define REDUCTION_WEAK 0.9
+#define REDUCTION_MED 0.8
+#define REDUCTION_STRONG 0.7
+
+#define INCREASE_WEAK 1.1
+#define INCREASE_MED  1.25
+#define INCREASE_STRONG 1.4
 
 enum Groups {
     NoGroup = 0,
@@ -375,14 +382,14 @@ double getARVHuristic(string tradeSymbol, int positionLifeTime) {
     }
 
     if (avrIndicatorValue < 0.2) { // is very steady
-        return 0.7;
+        return REDUCTION_STRONG;
     }
 
     if (avrIndicatorValue < 0.7) { // is normal
         return 1;
     }
 
-    return 1.2; // is very volatile
+    return INCREASE_MED; // is very volatile
 }
 
 
@@ -717,8 +724,8 @@ double getCurrentRetrace(int tradeTicket, GroupIds orderGroup, bool lifePeriodEf
           if (beVerbose) Print(symbol, ":", tradeTicket, ": Returning half a nprmal retrace for panic reserved ticket.");
         double reservingCoefficient =1;
         int reservedIndex = inReservedTrades(tradeTicket,symbol);
-        if( reservedIndex > 0 ) reservingCoefficient = MathPow(CASCADING_CONST, reservedIndex);  
-        return Fibo[TrailingInfo[gid_UltraLongTerm][Retrace]] * 0.65  * heuristicsValue * reservingCoefficient ;
+        if( reservedIndex > 0 ) reservingCoefficient = MathPow( REDUCTION_MED , reservedIndex);  
+        return Fibo[TrailingInfo[gid_UltraLongTerm][Retrace]] * REDUCTION_STRONG  * heuristicsValue * reservingCoefficient ;
     }
 
     if (TrailingInfo[orderGroup][LifePeriod] == PERIOD_CURRENT) {
@@ -812,7 +819,7 @@ double unsafeBalanceHeuristic(int ticketNumber, string symbol, int orderType, bo
     }
 
     if ((orderType == OP_BUY && pairInfoCache[pairIndex].unsafeNetPosition < 0) || (orderType == OP_SELL && pairInfoCache[pairIndex].unsafeNetPosition > 0)) {
-        return 1.2;
+        return INCREASE_MED;
     }
 
    if(tradeReservationEnabled && isReservedTrade(ticketNumber, symbol)) {
@@ -820,7 +827,7 @@ double unsafeBalanceHeuristic(int ticketNumber, string symbol, int orderType, bo
    }
    
    if ((orderType == OP_BUY && pairInfoCache[pairIndex].netPosition > 0.008) || (orderType == OP_SELL && pairInfoCache[pairIndex].netPosition < -0.008)) {
-        return 0.8;
+        return REDUCTION_MED;
     }
 
     return 1;
@@ -833,7 +840,7 @@ double balanceHeuristic(int ticketNumber, string symbol, int orderType, bool tra
     }
 
     if ((orderType == OP_BUY && pairInfoCache[pairIndex].netPosition < 0) || (orderType == OP_SELL && pairInfoCache[pairIndex].netPosition > 0)) {
-        return 1.2;
+        return INCREASE_MED;
     }
 
    if(tradeReservationEnabled && isReservedTrade(ticketNumber, symbol)) {
@@ -841,7 +848,7 @@ double balanceHeuristic(int ticketNumber, string symbol, int orderType, bool tra
    }
    
    if ((orderType == OP_BUY && pairInfoCache[pairIndex].netPosition > 0.008) || (orderType == OP_SELL && pairInfoCache[pairIndex].netPosition < -0.008)) {
-        return 0.75;
+        return REDUCTION_STRONG;
     }
 
     return 1;
@@ -903,23 +910,21 @@ double hammerHeuristic(int ticketNumber, string symbol, int orderType, bool trad
    double effectiveHammerness = hammerness(symbol, timeFrame, 1);
   
    if(effectiveHammerness > 6 ) {
-      if(orderType == OP_SELL ) return 0.75;
+      if(orderType == OP_SELL ) return REDUCTION_STRONG;
       } 
    if(effectiveHammerness > -6 ) {
      return 1;
       } 
       
-  if(orderType == OP_BUY) return 0.75;
+  if(orderType == OP_BUY) return REDUCTION_STRONG;
 
    return 1; 
 }
 
 
 //--------------
-int priceCrossedTimes(double price, string symbol,  ENUM_TIMEFRAMES timeFrame, int numberOfCandleSticks) {
+int priceCrossedTimes(double price, string symbol,  ENUM_TIMEFRAMES timeFrame, int numberOfCandleSticks, int pointsApproximation = 50) {
    int sumOfCrosses =  0;
-   
-   const int pointsApproximation= 200;
    double pointValue =MarketInfo(symbol, MODE_POINT);
    double approximation = pointsApproximation * pointValue;
    
@@ -937,13 +942,14 @@ double priceCrossHeuristic(int ticketNumber, string symbol, double orderOpenPric
 
    
     ENUM_TIMEFRAMES timeFrame =PERIOD_D1;
-   int crosses = priceCrossedTimes(orderOpenPrice, symbol, timeFrame, 11);
+    int pointsApproximation = TrailingInfo[tradeGroup][Step] * 4; 
+   int crosses = priceCrossedTimes(orderOpenPrice, symbol, timeFrame, 13, pointsApproximation);
   
    if(crosses <2 ) {
        return 1;
       } 
 
- return MathPow(CASCADING_CONST, crosses-1);
+ return MathPow(REDUCTION_STRONG, crosses-1);
 }
 
 
@@ -955,9 +961,9 @@ double dodgyHeuristic(int ticketNumber, string symbol, int orderType, bool trade
    ENUM_TIMEFRAMES timeFrame = findStandardTimeFrameOf(getTimeCoeficiented(symbol, TrailingInfo[tradeGroup][LifePeriod]));
    double effectiveDodginess = dodginess(symbol, timeFrame, 1) * candleSign(symbol,timeFrame, 2);
 
-   if(effectiveDodginess > 6 && orderType == OP_SELL ) return 0.75;
+   if(effectiveDodginess > 6 && orderType == OP_SELL ) return REDUCTION_STRONG;
    
-   if(effectiveDodginess < -6 && orderType == OP_BUY ) return 0.75;
+   if(effectiveDodginess < -6 && orderType == OP_BUY ) return REDUCTION_STRONG;
       
  return 1;
 }
@@ -1434,7 +1440,7 @@ double consecutivePositionHeuristic(int tradeTicket, string symbol) {
    int buyIndex = inArray(tradeTicket, pairInfoCache[index].enumeratedBuys, pairInfoCache[index].enumeratedBuysCount);
    if(buyIndex > -1) {
     if(buyIndex > pairInfoCache[index].reservedSellsCount ) {
-    return MathPow(CASCADING_CONST, buyIndex - 1 - pairInfoCache[index].reservedSellsCount);
+    return MathPow(REDUCTION_MED, buyIndex - 1 - pairInfoCache[index].reservedSellsCount);
     } else {
       return 1;
        }
@@ -1443,7 +1449,7 @@ double consecutivePositionHeuristic(int tradeTicket, string symbol) {
    int sellIndex = inArray(tradeTicket, pairInfoCache[index].enumeratedSells, pairInfoCache[index].enumeratedSellsCount);
    if(sellIndex > -1) {
     if(sellIndex > pairInfoCache[index].reservedBuysCount ) {
-    return MathPow(CASCADING_CONST, sellIndex - 1 - pairInfoCache[index].reservedBuysCount);
+    return MathPow(REDUCTION_MED, sellIndex - 1 - pairInfoCache[index].reservedBuysCount);
     } else {
       return 1;
     }

@@ -1,7 +1,7 @@
 // Desphilboy Position Creator
 #property copyright "Iman Dezfuly"
 #property link      "http://www.Iman.ir"
-#define version      "20180530"
+#define version      "20180601"
 
 #include "./desphilboy.mqh"
 
@@ -35,7 +35,7 @@ extern string PIPsToStartL = "3,11";
 extern string PIPsToStartVL = "2,10";
 extern string PIPsToStartUL = "1,9";
 
-extern int TradeSpacing = 90;
+extern int TradeSpacing = 110;
 
 extern double BuyLots = 0.01;
 extern double SellLots = 0.01;
