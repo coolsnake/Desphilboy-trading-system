@@ -1,7 +1,7 @@
 // Desphilboy Position Creator
 #property copyright "Iman Dezfuly"
 #property link      "http://www.Iman.ir"
-#define version      "20180601"
+#define version      "20180610"
 
 #include "./desphilboy.mqh"
 
@@ -174,20 +174,6 @@ int spacings[gid_Panic +1];
  string distances[100];
  int numTrades;
 
- /* createBuyStop(
-    string symbol,
-    double startingPrice,
-    int index,
-    int PIPsToStart,
-    int StopLossBuys,
-    int TakeProfitBuys,
-    Groups BuyStopsGroup,
-    int distance,
-    double buyLots,
-    int slippage,
-    int tradesExpireAfterHours,
-    int spacing) */
-
    if ( CreateBuys ) {
          numTrades= StringSplit(PIPsToStartUL, ',', distances);
          for(int i=0; i< numTrades; ++i) {
@@ -203,7 +189,7 @@ int spacings[gid_Panic +1];
                    BuyLots,
                    Slippage,
                    TradesExpireAfterHours,
-                   TradeSpacing
+                   (int) (TradeSpacing * BuyTradesDistanceCoefficient)
                    );
                }
 
@@ -221,7 +207,7 @@ int spacings[gid_Panic +1];
                    BuyLots,
                    Slippage,
                    TradesExpireAfterHours,
-                   TradeSpacing
+                   (int) (TradeSpacing * BuyTradesDistanceCoefficient)
                    );
                }
 
@@ -239,7 +225,7 @@ int spacings[gid_Panic +1];
                    BuyLots,
                    Slippage,
                    TradesExpireAfterHours,
-                   TradeSpacing
+                   (int) (TradeSpacing * BuyTradesDistanceCoefficient)
                    );
                }
 
@@ -257,7 +243,7 @@ int spacings[gid_Panic +1];
                    BuyLots,
                    Slippage,
                    TradesExpireAfterHours,
-                   TradeSpacing
+                   (int) (TradeSpacing * BuyTradesDistanceCoefficient)
                    );
                }
 
@@ -275,7 +261,7 @@ int spacings[gid_Panic +1];
                    BuyLots,
                    Slippage,
                    TradesExpireAfterHours,
-                   TradeSpacing
+                   (int) (TradeSpacing * BuyTradesDistanceCoefficient)
                    );
                }
 
@@ -293,7 +279,7 @@ int spacings[gid_Panic +1];
                    BuyLots,
                    Slippage,
                    TradesExpireAfterHours,
-                   TradeSpacing
+                   (int) (TradeSpacing * BuyTradesDistanceCoefficient)
                    );
                }
 
@@ -311,7 +297,7 @@ int spacings[gid_Panic +1];
                    BuyLots,
                    Slippage,
                    TradesExpireAfterHours,
-                   TradeSpacing
+                   (int) (TradeSpacing * BuyTradesDistanceCoefficient)
                    );
                }
 
@@ -329,7 +315,7 @@ int spacings[gid_Panic +1];
                    BuyLots,
                    Slippage,
                    TradesExpireAfterHours,
-                   TradeSpacing
+                   (int) (TradeSpacing * BuyTradesDistanceCoefficient)
                    );
                }
 
@@ -351,7 +337,7 @@ int spacings[gid_Panic +1];
                    SellLots,
                    Slippage,
                    TradesExpireAfterHours,
-                   TradeSpacing
+                   (int) (TradeSpacing * SellTradesDistanceCoefficient)
                    );
                }
 
@@ -369,7 +355,7 @@ int spacings[gid_Panic +1];
                    SellLots,
                    Slippage,
                    TradesExpireAfterHours,
-                   TradeSpacing
+                   (int) (TradeSpacing * SellTradesDistanceCoefficient)
                    );
                }
 
@@ -387,7 +373,7 @@ int spacings[gid_Panic +1];
                    SellLots,
                    Slippage,
                    TradesExpireAfterHours,
-                   TradeSpacing
+                   (int) (TradeSpacing * SellTradesDistanceCoefficient)
                    );
                }
 
@@ -405,7 +391,7 @@ int spacings[gid_Panic +1];
                    SellLots,
                    Slippage,
                    TradesExpireAfterHours,
-                   TradeSpacing
+                   (int) (TradeSpacing * SellTradesDistanceCoefficient)
                    );
                }
 
@@ -423,7 +409,7 @@ int spacings[gid_Panic +1];
                    SellLots,
                    Slippage,
                    TradesExpireAfterHours,
-                   TradeSpacing
+                   (int) (TradeSpacing * SellTradesDistanceCoefficient)
                    );
                }
 
@@ -441,7 +427,7 @@ int spacings[gid_Panic +1];
                    SellLots,
                    Slippage,
                    TradesExpireAfterHours,
-                   TradeSpacing
+                   (int) (TradeSpacing * SellTradesDistanceCoefficient)
                    );
                }
             numTrades= StringSplit(PIPsToStartUS, ',', distances);
@@ -458,10 +444,10 @@ int spacings[gid_Panic +1];
                    SellLots,
                    Slippage,
                    TradesExpireAfterHours,
-                   TradeSpacing
+                   (int) (TradeSpacing * SellTradesDistanceCoefficient)
                    );
                }
-numTrades= StringSplit(PIPsToStartI, ',', distances);
+         numTrades= StringSplit(PIPsToStartI, ',', distances);
             for(int i=0; i< numTrades; ++i) {
                   createSellStop(
                   Symbol(),
@@ -475,7 +461,7 @@ numTrades= StringSplit(PIPsToStartI, ',', distances);
                    SellLots,
                    Slippage,
                    TradesExpireAfterHours,
-                   TradeSpacing
+                   (int) (TradeSpacing * SellTradesDistanceCoefficient)
                    );
                    Sleep(DELAY);
                }
