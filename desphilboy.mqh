@@ -198,8 +198,10 @@ struct pairInfo {
     double unsafeSells;
     double buyLots;
     double sellLots;
+    int numberOfWinningBuys;
     int numberOfLoosingBuys;
     double volumeOfLoosingBuys;
+    int numberOfWinningSells;
     int numberOfLoosingSells;
     double volumeOfLoosingSells;
     int reservedOpositeSells[1000];
@@ -258,8 +260,10 @@ int updatePairInfoCache(string pairNamesCommaSeparated
         pairInfoCache[i].unsafeNetPosition = getUnsafeNetPosition(pairInfoCache[i].pairName);
         pairInfoCache[i].unsafeBuys = getUnsafeBuys(pairInfoCache[i].pairName);
         pairInfoCache[i].unsafeSells = getUnsafeSells(pairInfoCache[i].pairName);
+        pairInfoCache[i].numberOfWinningBuys = getNumberOfWinningBuys(pairInfoCache[i].pairName);
         pairInfoCache[i].numberOfLoosingBuys = getNumberOfLoosingBuys(pairInfoCache[i].pairName);
         pairInfoCache[i].volumeOfLoosingBuys = getVolumeOfLoosingBuys(pairInfoCache[i].pairName);
+        pairInfoCache[i].numberOfWinningSells = getNumberOfWinningSells(pairInfoCache[i].pairName);
         pairInfoCache[i].numberOfLoosingSells = getNumberOfLoosingSells(pairInfoCache[i].pairName);
         pairInfoCache[i].volumeOfLoosingSells = getVolumeOfLoosingSells(pairInfoCache[i].pairName);
         matchLoosingTrades(pairInfoCache[i]);
@@ -331,6 +335,19 @@ int getNumberOfLoosingBuys(string symbol) {
     return loosingBuysCounter;
 }
 
+int getNumberOfWinningBuys(string symbol) {
+    int winningBuysCounter = 0;
+    for (int i = 0; i < OrdersTotal(); i++) {
+        if (OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
+            if (OrderSymbol() == symbol && OrderType() == OP_BUY && OrderProfit() > 0) {
+                winningBuysCounter++;
+            }
+        }
+    }
+    return winningBuysCounter;
+}
+
+
 double getVolumeOfLoosingBuys(string symbol) {
     double loosingBuysVolume = 0;
     for (int i = 0; i < OrdersTotal(); i++) {
@@ -354,6 +371,19 @@ int getNumberOfLoosingSells(string symbol) {
     }
     return loosingSellsCounter;
 }
+
+int getNumberOfWinningSells(string symbol) {
+    int winningSellsCounter = 0;
+    for (int i = 0; i < OrdersTotal(); i++) {
+        if (OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
+            if (OrderSymbol() == symbol && OrderType() == OP_SELL && OrderProfit() > 0) {
+                winningSellsCounter++;
+            }
+        }
+    }
+    return winningSellsCounter;
+}
+
 
 double getVolumeOfLoosingSells(string symbol) {
     double loosingSellsVolume = 0;
@@ -1462,6 +1492,61 @@ int inReservedTrades(int tradeTicket, string symbol) {
    
    return inArray(tradeTicket, pairInfoCache[index].reservedOpositeSells, pairInfoCache[index].reservedSellsCount);
 }
+//---------------------
+
+double getOrderStopLossCapForReservedTrades(int tradeTicket, string symbol) {
+   if(OrderType() == OP_SELL) {
+   int tradeReservationPosition = inReservedTrades(tradeTicket, symbol);
+   if( tradeReservationPosition == -1) { return 0; }
+   
+   int symbolIndex = getPairInfoIndex(symbol);   
+   if( symbolIndex == -1) { return 0; }
+   if( pairInfoCache[symbolIndex].reservedSellsCount == 0 ) { return 0; }
+   
+   double symbolAsk = MarketInfo(symbol, MODE_ASK);
+   double distance = OrderOpenPrice() - symbolAsk;
+   
+   if( distance < 0 ) { return 0; }
+   
+   if(pairInfoCache[symbolIndex].numberOfWinningSells < 1 ) { return 0; }
+   
+   double distancePortion = distance / (pairInfoCache[symbolIndex].numberOfWinningSells + 1);
+   
+   if(beVerbose) { 
+   Print(symbol, ":", tradeTicket, ":SELL: using ", tradeReservationPosition + 1, "/", pairInfoCache[symbolIndex].numberOfWinningSells + 1, " of distance for calculating stopLoss Cap"); 
+   Print("distance is:", distance, " Portion is:", distancePortion, " cap: ", symbolAsk + distancePortion *  (pairInfoCache[symbolIndex].numberOfWinningSells - tradeReservationPosition));
+   } 
+   
+   return symbolAsk + distancePortion *  (pairInfoCache[symbolIndex].numberOfWinningSells - tradeReservationPosition);
+   } 
+
+   if(OrderType() == OP_BUY) {
+   int tradeReservationPosition = inReservedTrades(tradeTicket, symbol);
+   if( tradeReservationPosition == -1) { return 999999; }
+   
+   int symbolIndex = getPairInfoIndex(symbol);   
+   if( symbolIndex == -1) { return 999999; }
+   if( pairInfoCache[symbolIndex].reservedBuysCount == 0 ) { return 999999; }
+   
+   double symbolBid = MarketInfo(symbol, MODE_BID);
+   double distance = symbolBid - OrderOpenPrice();
+   
+   if(distance < 0) { return 999999; }
+   
+    if(pairInfoCache[symbolIndex].numberOfWinningBuys < 1 ) { return 999999; }
+   
+   double distancePortion = distance / (pairInfoCache[symbolIndex].numberOfWinningBuys  + 1);
+   
+   if(beVerbose) { 
+   Print(symbol, ":", tradeTicket, ":BUY: using ", tradeReservationPosition + 1, "/", pairInfoCache[symbolIndex].numberOfWinningBuys + 1, " of distance for calculating stopLoss Cap");
+   Print("distance is:", distance, " Portion is:", distancePortion, " cap: ",symbolBid - distancePortion * (pairInfoCache[symbolIndex].numberOfWinningBuys - tradeReservationPosition) );
+   } 
+   
+   return symbolBid - distancePortion * (pairInfoCache[symbolIndex].numberOfWinningBuys - tradeReservationPosition);
+   }
+   
+   return 0; 
+}
 
 //----------------------
 
@@ -1575,12 +1660,20 @@ void trailPosition(int orderTicket,
         pBid = MarketInfo(OrderSymbol(), MODE_BID);
         pDiff = pBid - OrderOpenPrice();
         pRetraceTrail = pDiff > pDirectTrail ? (pDiff - pDirectTrail) * RetraceValue : 0;
-        if (beVerbose) Print(OrderTicket(), " RetraceTrail value is: ", pRetraceTrail);
-        pRef = pBid - pDirectTrail - pRetraceTrail;
+        if (beVerbose) Print(OrderSymbol(),":Buy:",OrderTicket(), " RetraceTrail value is: ", pRetraceTrail);
+        pRef = pBid - pDirectTrail - pRetraceTrail; 
         if (beVerbose) Print(OrderTicket(), " Ref value is: ", pRef);
+        
+        pRef = MathMin(pRef, getOrderStopLossCapForReservedTrades(OrderTicket(),OrderSymbol()));
+        if (beVerbose) Print(OrderTicket(), " Ref after cap is: ", pRef);
 
         if (pRef - OrderOpenPrice() > 0) { // order is in profit.
-            if ((OrderStopLoss() != 0.0 && pRef - OrderStopLoss() > pStep && pRef - OrderOpenPrice() > pStep) || (OrderStopLoss() == 0.0 && pRef - OrderOpenPrice() > pStep)) {
+            if (
+            (OrderStopLoss() != 0.0 
+            && pRef - OrderStopLoss() > pStep 
+            && pRef - OrderOpenPrice() > pStep) 
+            ||(OrderStopLoss() == 0.0 
+            && pRef - OrderOpenPrice() > pStep)) {
                 ModifyStopLoss(pRef);
                 return;
             }
@@ -1592,6 +1685,10 @@ void trailPosition(int orderTicket,
         pDiff = OrderOpenPrice() - pAsk;
         pRetraceTrail = pDiff > pDirectTrail ? (pDiff - pDirectTrail) * RetraceValue : 0;
         pRef = pAsk + pDirectTrail + pRetraceTrail;
+        if (beVerbose) Print(OrderSymbol(),":Sell:",OrderTicket(), " Ref value is: ", pRef);
+        
+        pRef = MathMax(pRef, getOrderStopLossCapForReservedTrades(OrderTicket(),OrderSymbol()));
+        if (beVerbose) Print(OrderTicket(), " Ref after cap is: ", pRef);
 
         if (OrderOpenPrice() - pRef > 0) { // order is in profit.
             if ((OrderStopLoss() != 0.0 && OrderStopLoss() - pRef > pStep && OrderOpenPrice() - pRef > pStep) || (OrderStopLoss() == 0.0 && OrderOpenPrice() - pRef > pStep)) {
