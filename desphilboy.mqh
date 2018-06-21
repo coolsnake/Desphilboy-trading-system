@@ -40,9 +40,9 @@
 #define REDUCTION_MED 0.8
 #define REDUCTION_STRONG 0.7
 
-#define INCREASE_WEAK 1.1
-#define INCREASE_MED  1.25
-#define INCREASE_STRONG 1.4
+#define INCREASE_WEAK 1.05
+#define INCREASE_MED  1.15
+#define INCREASE_STRONG 1.3
 
 enum Groups {
     NoGroup = 0,
@@ -199,11 +199,15 @@ struct pairInfo {
     double buyLots;
     double sellLots;
     int numberOfLoosingBuys;
+    double volumeOfLoosingBuys;
     int numberOfLoosingSells;
+    double volumeOfLoosingSells;
     int reservedOpositeSells[1000];
     int reservedOpositeBuys[1000];
     int reservedBuysCount;
+    double reservedBuysVolume; 
     int reservedSellsCount;
+    double reservedSellsVolume;
     int numBuys;
     int numSells;
     int enumeratedSells[1000];
@@ -255,7 +259,9 @@ int updatePairInfoCache(string pairNamesCommaSeparated
         pairInfoCache[i].unsafeBuys = getUnsafeBuys(pairInfoCache[i].pairName);
         pairInfoCache[i].unsafeSells = getUnsafeSells(pairInfoCache[i].pairName);
         pairInfoCache[i].numberOfLoosingBuys = getNumberOfLoosingBuys(pairInfoCache[i].pairName);
+        pairInfoCache[i].volumeOfLoosingBuys = getVolumeOfLoosingBuys(pairInfoCache[i].pairName);
         pairInfoCache[i].numberOfLoosingSells = getNumberOfLoosingSells(pairInfoCache[i].pairName);
+        pairInfoCache[i].volumeOfLoosingSells = getVolumeOfLoosingSells(pairInfoCache[i].pairName);
         matchLoosingTrades(pairInfoCache[i]);
         enumerateTrades(pairInfoCache[i]);
     }
@@ -275,13 +281,15 @@ int updatePairInfoCache(string pairNamesCommaSeparated
          
             Print("netPosition:", pairInfoCache[i].netPosition, " Buys:", pairInfoCache[i].buyLots, " Sells:", pairInfoCache[i].sellLots);
             Print("unsafeNetPosition:", pairInfoCache[i].unsafeNetPosition, " unsafeBuys:", pairInfoCache[i].unsafeBuys, " unsafeSells:", pairInfoCache[i].unsafeSells);
-            Print("numberOfLoosingBuys:", pairInfoCache[i].numberOfLoosingBuys);
+            Print("numberOfLoosingBuys:", pairInfoCache[i].numberOfLoosingBuys," with Lots:", pairInfoCache[i].volumeOfLoosingBuys);
             for (int j = 0; j < pairInfoCache[i].reservedSellsCount; ++j)
                 Print("reservedSells[", j, "]=", pairInfoCache[i].reservedOpositeSells[j]);
-            Print("numberOfLoosingSells:", pairInfoCache[i].numberOfLoosingSells);
+                Print("Volume of reserved Sells:", pairInfoCache[i].reservedSellsVolume);
+            
+            Print("numberOfLoosingSells:", pairInfoCache[i].numberOfLoosingSells, " with Lots:", pairInfoCache[i].volumeOfLoosingSells);
             for (int j = 0; j < pairInfoCache[i].reservedBuysCount; ++j)
                 Print("reservedBuys[", j, "]=", pairInfoCache[i].reservedOpositeBuys[j]);
-                
+                Print("Volume of reserved Buys:", pairInfoCache[i].reservedBuysVolume);
         }
     }
 
@@ -323,6 +331,17 @@ int getNumberOfLoosingBuys(string symbol) {
     return loosingBuysCounter;
 }
 
+double getVolumeOfLoosingBuys(string symbol) {
+    double loosingBuysVolume = 0;
+    for (int i = 0; i < OrdersTotal(); i++) {
+        if (OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
+            if (OrderSymbol() == symbol && OrderType() == OP_BUY && OrderProfit() < 0) {
+                loosingBuysVolume+= OrderLots();
+            }
+        }
+    }
+    return loosingBuysVolume;
+}
 
 int getNumberOfLoosingSells(string symbol) {
     int loosingSellsCounter = 0;
@@ -334,6 +353,18 @@ int getNumberOfLoosingSells(string symbol) {
         }
     }
     return loosingSellsCounter;
+}
+
+double getVolumeOfLoosingSells(string symbol) {
+    double loosingSellsVolume = 0;
+    for (int i = 0; i < OrdersTotal(); i++) {
+        if (OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
+            if (OrderSymbol() == symbol && OrderType() == OP_SELL && OrderProfit() < 0) {
+                loosingSellsVolume+= OrderLots();
+            }
+        }
+    }
+    return loosingSellsVolume;
 }
 
 
@@ -437,14 +468,16 @@ int findHighestSell(string symbol, double ceilingPrice = 99999999) {
 void matchLoosingTrades(pairInfo & pairinfo) {
     int ticketFound = 0;
     pairinfo.reservedSellsCount = 0;
+    pairinfo.reservedSellsVolume = 0;
     double priceOfFoundTrade = 999999999;
-    for (int i = 0; i < pairinfo.numberOfLoosingBuys && ticketFound != -1; ++i) {
+    for (int i = 0; pairinfo.volumeOfLoosingBuys > pairinfo.reservedSellsVolume && ticketFound != -1; ++i) {
         ticketFound = findHighestSell(pairinfo.pairName, priceOfFoundTrade);
         if (ticketFound != -1) {
             pairinfo.reservedOpositeSells[i] = ticketFound;
             pairinfo.reservedSellsCount++;
             if (OrderSelect(ticketFound, SELECT_BY_TICKET, MODE_TRADES)) {
                 priceOfFoundTrade = OrderOpenPrice();
+                pairinfo.reservedSellsVolume += OrderLots();
             } else {
                 Print("matchLoosingTrades:could not select ticket:", ticketFound, " breaking the search.");
                 break;
@@ -455,14 +488,16 @@ void matchLoosingTrades(pairInfo & pairinfo) {
     ticketFound = 0;
     priceOfFoundTrade = 0;
     pairinfo.reservedBuysCount = 0;
-    for (int i = 0; i < pairinfo.numberOfLoosingSells && ticketFound != -1; ++i) {
+    pairinfo.reservedBuysVolume = 0;
+    for (int i = 0; pairinfo.volumeOfLoosingSells > pairinfo.reservedBuysVolume && ticketFound != -1; ++i) {
         ticketFound = findLowestBuy(pairinfo.pairName, priceOfFoundTrade);
         if (ticketFound != -1) {
             pairinfo.reservedOpositeBuys[i] = ticketFound;
             pairinfo.reservedBuysCount++;
             if (OrderSelect(ticketFound, SELECT_BY_TICKET, MODE_TRADES)) {
                 priceOfFoundTrade = OrderOpenPrice();
-            }else {
+                pairinfo.reservedBuysVolume += OrderLots();
+            } else {
                 Print("matchLoosingTrades:could not select ticket:", ticketFound, " breaking the search.");
                 break;
             }
