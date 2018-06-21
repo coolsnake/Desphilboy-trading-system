@@ -1667,7 +1667,7 @@ void trailPosition(int orderTicket,
         pRef = MathMin(pRef, getOrderStopLossCapForReservedTrades(OrderTicket(),OrderSymbol()));
         if (beVerbose) Print(OrderTicket(), " Ref after cap is: ", pRef);
 
-        if (pRef - OrderOpenPrice() > 0) { // order is in profit.
+        if (pRef - OrderOpenPrice() > 0) { // ref is more profity than order.
             if (
             (OrderStopLoss() != 0.0 
             && pRef - OrderStopLoss() > pStep 
@@ -1690,7 +1690,7 @@ void trailPosition(int orderTicket,
         pRef = MathMax(pRef, getOrderStopLossCapForReservedTrades(OrderTicket(),OrderSymbol()));
         if (beVerbose) Print(OrderTicket(), " Ref after cap is: ", pRef);
 
-        if (OrderOpenPrice() - pRef > 0) { // order is in profit.
+        if (OrderOpenPrice() - pRef > 0) { // ref is more  in profit.
             if ((OrderStopLoss() != 0.0 && OrderStopLoss() - pRef > pStep && OrderOpenPrice() - pRef > pStep) || (OrderStopLoss() == 0.0 && OrderOpenPrice() - pRef > pStep)) {
                 ModifyStopLoss(pRef);
                 return;
