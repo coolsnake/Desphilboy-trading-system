@@ -500,6 +500,7 @@ void matchLoosingTrades(pairInfo & pairinfo) {
     pairinfo.reservedSellsCount = 0;
     pairinfo.reservedSellsVolume = 0;
     double priceOfFoundTrade = 999999999;
+    if(pairinfo.sellLots <  pairinfo.buyLots) { // reserve sells only if we have less sells
     for (int i = 0; pairinfo.volumeOfLoosingBuys > pairinfo.reservedSellsVolume && ticketFound != -1; ++i) {
         ticketFound = findHighestSell(pairinfo.pairName, priceOfFoundTrade);
         if (ticketFound != -1) {
@@ -514,8 +515,8 @@ void matchLoosingTrades(pairInfo & pairinfo) {
             }
         }
     }
-
-    ticketFound = 0;
+   } else if( pairinfo.buyLots < pairinfo.sellLots ) { // reserve buys only if we have less buys
+     ticketFound = 0;
     priceOfFoundTrade = 0;
     pairinfo.reservedBuysCount = 0;
     pairinfo.reservedBuysVolume = 0;
@@ -532,6 +533,7 @@ void matchLoosingTrades(pairInfo & pairinfo) {
                 break;
             }
         }
+    }
     }
     return;
 }
