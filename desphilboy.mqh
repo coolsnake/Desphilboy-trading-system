@@ -787,10 +787,7 @@ double getCurrentRetrace(int tradeTicket, GroupIds orderGroup, bool lifePeriodEf
 
     if (panic && isReservedTrade(tradeTicket,symbol)) {
           if (beVerbose) Print(symbol, ":", tradeTicket, ": Returning half a nprmal retrace for panic reserved ticket.");
-        double reservingCoefficient =1;
-        int reservedIndex = inReservedTrades(tradeTicket,symbol);
-        if( reservedIndex > 0 ) reservingCoefficient = MathPow( REDUCTION_MED , reservedIndex);  
-        return Fibo[TrailingInfo[gid_UltraLongTerm][Retrace]] * REDUCTION_STRONG  * heuristicsValue * reservingCoefficient ;
+        return Fibo[TrailingInfo[gid_UltraLongTerm][Retrace]] * REDUCTION_STRONG  * heuristicsValue * 0.5 ;
     }
 
     if (TrailingInfo[orderGroup][LifePeriod] == PERIOD_CURRENT) {
