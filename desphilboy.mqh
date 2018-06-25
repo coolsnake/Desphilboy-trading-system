@@ -266,8 +266,8 @@ int updatePairInfoCache(string pairNamesCommaSeparated
         pairInfoCache[i].numberOfWinningSells = getNumberOfWinningSells(pairInfoCache[i].pairName);
         pairInfoCache[i].numberOfLoosingSells = getNumberOfLoosingSells(pairInfoCache[i].pairName);
         pairInfoCache[i].volumeOfLoosingSells = getVolumeOfLoosingSells(pairInfoCache[i].pairName);
-        matchLoosingTrades(pairInfoCache[i]);
         enumerateTrades(pairInfoCache[i]);
+        matchLoosingTrades(pairInfoCache[i]);        
     }
 
     if (beVerbose) {
@@ -474,6 +474,28 @@ int findLowestBuy(string symbol, double floorPrice = 0.0) {
     return lowestTicket;
 }
 
+int findLowestSell(string symbol, double floorPrice = 0.0) {
+    int preserveTicket = OrderTicket();
+    double lowestprice = 999999999;
+    int lowestTicket = -1;
+
+    for (int i = 0; i < OrdersTotal(); i++) {
+        if (OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
+            if (OrderSymbol() == symbol && OrderType() == OP_SELL) {
+                if (OrderOpenPrice() < lowestprice && OrderOpenPrice() > floorPrice) {
+                    lowestTicket = OrderTicket();
+                    lowestprice = OrderOpenPrice();
+                }
+            }
+        }
+    }
+
+    bool bResult = OrderSelect(preserveTicket, SELECT_BY_TICKET, MODE_TRADES);
+    return lowestTicket;
+}
+
+
+
 
 int findHighestSell(string symbol, double ceilingPrice = 99999999) {
     int preserveTicket = OrderTicket();
@@ -495,14 +517,40 @@ int findHighestSell(string symbol, double ceilingPrice = 99999999) {
     return highestTicket;
 }
 
+
+int findHighestBuy(string symbol, double ceilingPrice = 99999999) {
+    int preserveTicket = OrderTicket();
+    double highestprice = 0;
+    int highestTicket = -1;
+
+    for (int i = 0; i < OrdersTotal(); i++) {
+        if (OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
+            if (OrderSymbol() == symbol && OrderType() == OP_BUY) {
+                if (OrderOpenPrice() > highestprice && OrderOpenPrice() < ceilingPrice) {
+                    highestTicket = OrderTicket();
+                    highestprice = OrderOpenPrice();
+                }
+            }
+        }
+    }
+
+    bool bResult = OrderSelect(preserveTicket, SELECT_BY_TICKET, MODE_TRADES);
+    return highestTicket;
+}
+
+
+
 void matchLoosingTrades(pairInfo & pairinfo) {
+    int temparray[1000];
     int ticketFound = 0;
     pairinfo.reservedSellsCount = 0;
     pairinfo.reservedSellsVolume = 0;
-    double priceOfFoundTrade = 999999999;
-    if(pairinfo.sellLots <  pairinfo.buyLots) { // reserve sells only if we have less sells
+    double priceOfFoundTrade = 0;
+    
+    ArrayInitialize(temparray, -1);
+     
     for (int i = 0; pairinfo.volumeOfLoosingBuys > pairinfo.reservedSellsVolume && ticketFound != -1; ++i) {
-        ticketFound = findHighestSell(pairinfo.pairName, priceOfFoundTrade);
+        ticketFound = findLowestSell(pairinfo.pairName, priceOfFoundTrade);
         if (ticketFound != -1) {
             pairinfo.reservedOpositeSells[i] = ticketFound;
             pairinfo.reservedSellsCount++;
@@ -515,13 +563,16 @@ void matchLoosingTrades(pairInfo & pairinfo) {
             }
         }
     }
-   } else if( pairinfo.buyLots < pairinfo.sellLots ) { // reserve buys only if we have less buys
-     ticketFound = 0;
-    priceOfFoundTrade = 0;
+
+    for( int i = 0; i < pairinfo.reservedSellsCount;  ++i) temparray[i] = pairinfo.reservedOpositeSells[pairinfo.reservedSellsCount - i - 1];
+    for( int i = 0; i < pairinfo.reservedSellsCount;  ++i) pairinfo.reservedOpositeSells[i] = temparray[i];
+   
+    ticketFound = 0;
+    priceOfFoundTrade = 999999;
     pairinfo.reservedBuysCount = 0;
     pairinfo.reservedBuysVolume = 0;
     for (int i = 0; pairinfo.volumeOfLoosingSells > pairinfo.reservedBuysVolume && ticketFound != -1; ++i) {
-        ticketFound = findLowestBuy(pairinfo.pairName, priceOfFoundTrade);
+        ticketFound = findHighestBuy(pairinfo.pairName, priceOfFoundTrade);
         if (ticketFound != -1) {
             pairinfo.reservedOpositeBuys[i] = ticketFound;
             pairinfo.reservedBuysCount++;
@@ -534,7 +585,11 @@ void matchLoosingTrades(pairInfo & pairinfo) {
             }
         }
     }
-    }
+    
+    for( int i = 0; i < pairinfo.reservedBuysCount;  ++i) temparray[i] = pairinfo.reservedOpositeBuys[pairinfo.reservedBuysCount - i - 1];
+    for( int i = 0; i < pairinfo.reservedBuysCount;  ++i) pairinfo.reservedOpositeBuys[i] = temparray[i];
+     
+    
     return;
 }
 
