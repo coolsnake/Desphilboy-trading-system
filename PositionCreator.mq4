@@ -1,7 +1,7 @@
 // Desphilboy Position Creator
 #property copyright "Iman Dezfuly"
 #property link      "http://www.Iman.ir"
-#define version      "20180620"
+#define version      "20180630"
 
 #include "./desphilboy.mqh"
 
@@ -59,7 +59,7 @@ extern int Slippage = 50;
 extern int TradesExpireAfterHours = 0;
 extern double BuyTradesDistanceCoefficient = 1.0;
 extern double SellTradesDistanceCoefficient = 1.0;
-extern int InitialPIPsToStart = 300;
+extern int InitialPIPsToStart = 350;
 
 static bool askUserToDoPositions = false;
 static bool doPositionsOnce = false;

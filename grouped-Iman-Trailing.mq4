@@ -1,7 +1,7 @@
 // simple trailing stop
 #property copyright "Iman Dezfuly"
 #property link      "http://www.Iman.ir"
-#define version      "20180620"
+#define version      "20180630"
 #include "./desphilboy.mqh"
 
 extern bool ManageAllPairs = true;
@@ -14,8 +14,8 @@ TrailingStepS = 70, TrailingStepVS = 60, TrailingStepUS = 60, TrailingStepI = 60
 extern FiboRetrace RetraceFactorUL = Retrace80, RetraceFactorVL = Retrace76, RetraceFactorL = Retrace74, RetraceFactorM = Retrace72,
 RetraceFactorS = Retrace70, RetraceFactorVS = Retrace65, RetraceFactorUS = RetraceMax, RetraceFactorI = Retrace60;
 
-extern LifeTimes TimeFrameUL = FourDays, TimeFrameVL = ThreeDays, TimeFrameL = TwoDays, TimeFrameM = OneDay,
-TimeFrameS = TwentyHours, TimeFrameVS = SixteenHours, TimeFrameUS = TwelveHours, TimeFrameI = EightHours;
+extern LifeTimes TimeFrameUL = FiveDays, TimeFrameVL = FourDays, TimeFrameL = ThreeDays, TimeFrameM = TwoAndHalfDays,
+TimeFrameS = TwoDays, TimeFrameVS = FourtyHours, TimeFrameUS = ThirtyHours, TimeFrameI = TwentyHours;
 extern bool ContinueLifeTimeAfterFirstSL = true;
 extern ENUM_TIMEFRAMES PanicTimeFrame = PERIOD_M15;
 extern int PanicPIPS = 1000;
