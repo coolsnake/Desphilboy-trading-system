@@ -1,7 +1,7 @@
 // simple trailing stop
 #property copyright "Iman Dezfuly"
 #property link      "http://www.Iman.ir"
-#define version      "20180630"
+#define version      "20180707"
 #include "./desphilboy.mqh"
 
 extern bool ManageAllPairs = true;

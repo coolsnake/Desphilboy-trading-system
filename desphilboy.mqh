@@ -1494,57 +1494,19 @@ int inReservedTrades(int tradeTicket, string symbol) {
 //---------------------
 
 double getOrderStopLossCapForReservedTrades(int tradeTicket, string symbol) {
-   if(OrderType() == OP_SELL) {
-   int tradeReservationPosition = inReservedTrades(tradeTicket, symbol);
-   if( tradeReservationPosition == -1) { return 0; }
-   
-   int symbolIndex = getPairInfoIndex(symbol);   
-   if( symbolIndex == -1) { return 0; }
-   if( pairInfoCache[symbolIndex].reservedSellsCount == 0 ) { return 0; }
-   
-   double symbolAsk = MarketInfo(symbol, MODE_ASK);
-   double distance = OrderOpenPrice() - symbolAsk;
-   
-   if( distance < 0 ) { return 0; }
-   
-   if(pairInfoCache[symbolIndex].numberOfWinningSells < 1 ) { return 0; }
-   
-   double distancePortion = distance / (pairInfoCache[symbolIndex].numberOfWinningSells + 1);
-   
-   if(beVerbose) { 
-   Print(symbol, ":", tradeTicket, ":SELL: using ", tradeReservationPosition + 1, "/", pairInfoCache[symbolIndex].numberOfWinningSells + 1, " of distance for calculating stopLoss Cap"); 
-   Print("distance is:", distance, " Portion is:", distancePortion, " cap: ", symbolAsk + distancePortion *  (pairInfoCache[symbolIndex].numberOfWinningSells - tradeReservationPosition));
-   } 
-   
-   return symbolAsk + distancePortion *  (pairInfoCache[symbolIndex].numberOfWinningSells - tradeReservationPosition);
-   } 
 
-   if(OrderType() == OP_BUY) {
-   int tradeReservationPosition = inReservedTrades(tradeTicket, symbol);
-   if( tradeReservationPosition == -1) { return 999999; }
+   double pointValue = MarketInfo(symbol, MODE_POINT);
    
-   int symbolIndex = getPairInfoIndex(symbol);   
-   if( symbolIndex == -1) { return 999999; }
-   if( pairInfoCache[symbolIndex].reservedBuysCount == 0 ) { return 999999; }
    
-   double symbolBid = MarketInfo(symbol, MODE_BID);
-   double distance = symbolBid - OrderOpenPrice();
-   
-   if(distance < 0) { return 999999; }
-   
-    if(pairInfoCache[symbolIndex].numberOfWinningBuys < 1 ) { return 999999; }
-   
-   double distancePortion = distance / (pairInfoCache[symbolIndex].numberOfWinningBuys  + 1);
-   
-   if(beVerbose) { 
-   Print(symbol, ":", tradeTicket, ":BUY: using ", tradeReservationPosition + 1, "/", pairInfoCache[symbolIndex].numberOfWinningBuys + 1, " of distance for calculating stopLoss Cap");
-   Print("distance is:", distance, " Portion is:", distancePortion, " cap: ",symbolBid - distancePortion * (pairInfoCache[symbolIndex].numberOfWinningBuys - tradeReservationPosition) );
-   } 
-   
-   return symbolBid - distancePortion * (pairInfoCache[symbolIndex].numberOfWinningBuys - tradeReservationPosition);
-   }
-   
-   return 0; 
+      if( OrderType() == OP_BUY ) {
+         if(isReservedTrade(tradeTicket, symbol)) {
+            return OrderOpenPrice() + 4 * TrailingInfo[gid_UltraLongTerm][Step] * pointValue;
+         }
+           else return 9999999;
+      }
+      else if( isReservedTrade(tradeTicket, symbol)) return OrderOpenPrice() - 4 * TrailingInfo[gid_UltraLongTerm][Step] * pointValue;
+      
+   return 0;
 }
 
 //----------------------
