@@ -1,21 +1,21 @@
 // simple trailing stop
 #property copyright "Iman Dezfuly"
 #property link      "http://www.Iman.ir"
-#define version      "20180707"
+#define version      "20180709"
 #include "./desphilboy.mqh"
 
 extern bool ManageAllPairs = true;
-extern int TrailingStopUL = 1200, TrailingStopVL = 1100, TrailingStopL = 1000, TrailingStopM = 900,
-TrailingStopS = 800, TrailingStopVS = 700, TrailingStopUS = 600, TrailingStopI = 500;
+extern int TrailingStopUL = 1400, TrailingStopVL = 1350, TrailingStopL = 1300, TrailingStopM = 1250,
+TrailingStopS = 1200, TrailingStopVS = 1150, TrailingStopUS = 1100, TrailingStopI = 1050;
 
 extern int TrailingStepUL = 80, TrailingStepVL = 80, TrailingStepL = 70, TrailingStepM = 70,
 TrailingStepS = 70, TrailingStepVS = 60, TrailingStepUS = 60, TrailingStepI = 60;
 
-extern FiboRetrace RetraceFactorUL = Retrace80, RetraceFactorVL = Retrace76, RetraceFactorL = Retrace74, RetraceFactorM = Retrace72,
-RetraceFactorS = Retrace70, RetraceFactorVS = Retrace65, RetraceFactorUS = RetraceMax, RetraceFactorI = Retrace60;
+extern FiboRetrace RetraceFactorUL = Retrace91, RetraceFactorVL = Retrace89, RetraceFactorL = Retrace87, RetraceFactorM = Retrace82,
+RetraceFactorS = Retrace80, RetraceFactorVS = Retrace78, RetraceFactorUS = Retrace76, RetraceFactorI = Retrace74;
 
-extern LifeTimes TimeFrameUL = FiveDays, TimeFrameVL = FourDays, TimeFrameL = ThreeDays, TimeFrameM = TwoAndHalfDays,
-TimeFrameS = TwoDays, TimeFrameVS = FourtyHours, TimeFrameUS = ThirtyHours, TimeFrameI = TwentyHours;
+extern LifeTimes TimeFrameUL = TwelveDays, TimeFrameVL = FiveDays, TimeFrameL = FourDays, TimeFrameM = ThreeDays,
+TimeFrameS = TwoDays, TimeFrameVS = FourtyHours, TimeFrameUS = ThirtyHours, TimeFrameI = OneDay;
 extern bool ContinueLifeTimeAfterFirstSL = true;
 extern ENUM_TIMEFRAMES PanicTimeFrame = PERIOD_M15;
 extern int PanicPIPS = 1000;
