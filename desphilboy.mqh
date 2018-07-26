@@ -162,7 +162,9 @@ enum FiboRetrace {
     Retrace82= 16,
     Retrace87= 17,
     Retrace89= 18,
-    Retrace91= 19
+    Retrace91= 19,
+    Retrace95= 20,
+    Retrace99= 21
 };
 
 double Fibo[] = {
@@ -185,7 +187,9 @@ double Fibo[] = {
     0.82, //whole
     0.87,
     0.89,
-    0.91
+    0.91,
+    0.95,
+    0.99
 };
 
 struct pairInfo {

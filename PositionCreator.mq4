@@ -1,7 +1,7 @@
 // Desphilboy Position Creator
 #property copyright "Iman Dezfuly"
 #property link      "http://www.Iman.ir"
-#define version      "20180709"
+#define version      "20180720"
 
 #include "./desphilboy.mqh"
 
@@ -35,7 +35,7 @@ extern string PIPsToStartL = "3,11";
 extern string PIPsToStartVL = "2,10";
 extern string PIPsToStartUL = "1,9";
 
-extern int TradeSpacing = 101;
+extern int TradeSpacing = 76;
 
 extern double BuyLots = 0.01;
 extern double SellLots = 0.01;
@@ -181,7 +181,7 @@ int spacings[gid_Panic +1];
                   Symbol(),
                    BuyStartingPrice,
                    StrToInteger(distances[i]),
-                   InitialPIPsToStart,
+                   (int) (InitialPIPsToStart * BuyTradesDistanceCoefficient),
                    TradesStopLoss,
                    TradesTakeProfit,
                    UltraLongTerm,
@@ -199,7 +199,7 @@ int spacings[gid_Panic +1];
                   Symbol(),
                    BuyStartingPrice,
                    StrToInteger(distances[i]),
-                   InitialPIPsToStart,
+                   (int) (InitialPIPsToStart * BuyTradesDistanceCoefficient),
                    TradesStopLoss,
                    TradesTakeProfit,
                    VeryLongTerm,
@@ -217,7 +217,7 @@ int spacings[gid_Panic +1];
                   Symbol(),
                    BuyStartingPrice,
                    StrToInteger(distances[i]),
-                   InitialPIPsToStart,
+                   (int) (InitialPIPsToStart * BuyTradesDistanceCoefficient),
                    TradesStopLoss,
                    TradesTakeProfit,
                    LongTerm,
@@ -235,7 +235,7 @@ int spacings[gid_Panic +1];
                   Symbol(),
                    BuyStartingPrice,
                    StrToInteger(distances[i]),
-                   InitialPIPsToStart,
+                   (int) (InitialPIPsToStart * BuyTradesDistanceCoefficient),
                    TradesStopLoss,
                    TradesTakeProfit,
                    MediumTerm,
@@ -253,7 +253,7 @@ int spacings[gid_Panic +1];
                   Symbol(),
                    BuyStartingPrice,
                    StrToInteger(distances[i]),
-                   InitialPIPsToStart,
+                   (int) (InitialPIPsToStart * BuyTradesDistanceCoefficient),
                    TradesStopLoss,
                    TradesTakeProfit,
                    ShortTerm,
@@ -271,7 +271,7 @@ int spacings[gid_Panic +1];
                   Symbol(),
                    BuyStartingPrice,
                    StrToInteger(distances[i]),
-                   InitialPIPsToStart,
+                   (int) (InitialPIPsToStart * BuyTradesDistanceCoefficient),
                    TradesStopLoss,
                    TradesTakeProfit,
                    VeryShortTerm,
@@ -289,7 +289,7 @@ int spacings[gid_Panic +1];
                   Symbol(),
                    BuyStartingPrice,
                    StrToInteger(distances[i]),
-                   InitialPIPsToStart,
+                   (int) (InitialPIPsToStart * BuyTradesDistanceCoefficient),
                    TradesStopLoss,
                    TradesTakeProfit,
                    UltraShortTerm,
@@ -307,7 +307,7 @@ int spacings[gid_Panic +1];
                   Symbol(),
                    BuyStartingPrice,
                    StrToInteger(distances[i]),
-                   InitialPIPsToStart,
+                   (int) (InitialPIPsToStart * BuyTradesDistanceCoefficient),
                    TradesStopLoss,
                    TradesTakeProfit,
                    InstantTerm,
@@ -329,7 +329,7 @@ int spacings[gid_Panic +1];
                   Symbol(),
                    SellStartingPrice,
                    StrToInteger(distances[i]),
-                   InitialPIPsToStart,
+                   (int) (InitialPIPsToStart * SellTradesDistanceCoefficient),
                    TradesStopLoss,
                    TradesTakeProfit,
                    UltraLongTerm,
@@ -347,7 +347,7 @@ int spacings[gid_Panic +1];
                   Symbol(),
                    SellStartingPrice,
                    StrToInteger(distances[i]),
-                   InitialPIPsToStart,
+                   (int) (InitialPIPsToStart * SellTradesDistanceCoefficient),
                    TradesStopLoss,
                    TradesTakeProfit,
                    VeryLongTerm,
@@ -365,7 +365,7 @@ int spacings[gid_Panic +1];
                   Symbol(),
                    SellStartingPrice,
                    StrToInteger(distances[i]),
-                   InitialPIPsToStart,
+                   (int) (InitialPIPsToStart * SellTradesDistanceCoefficient),
                    TradesStopLoss,
                    TradesTakeProfit,
                    LongTerm,
@@ -383,7 +383,7 @@ int spacings[gid_Panic +1];
                   Symbol(),
                    SellStartingPrice,
                    StrToInteger(distances[i]),
-                   InitialPIPsToStart,
+                   (int) (InitialPIPsToStart * SellTradesDistanceCoefficient),
                    TradesStopLoss,
                    TradesTakeProfit,
                    MediumTerm,
@@ -401,7 +401,7 @@ int spacings[gid_Panic +1];
                   Symbol(),
                    SellStartingPrice,
                    StrToInteger(distances[i]),
-                   InitialPIPsToStart,
+                   (int) (InitialPIPsToStart * SellTradesDistanceCoefficient),
                    TradesStopLoss,
                    TradesTakeProfit,
                    ShortTerm,
@@ -419,7 +419,7 @@ int spacings[gid_Panic +1];
                   Symbol(),
                    SellStartingPrice,
                    StrToInteger(distances[i]),
-                   InitialPIPsToStart,
+                   (int) (InitialPIPsToStart * SellTradesDistanceCoefficient),
                    TradesStopLoss,
                    TradesTakeProfit,
                    VeryShortTerm,
@@ -436,7 +436,7 @@ int spacings[gid_Panic +1];
                   Symbol(),
                    SellStartingPrice,
                    StrToInteger(distances[i]),
-                   InitialPIPsToStart,
+                   (int) (InitialPIPsToStart * SellTradesDistanceCoefficient),
                    TradesStopLoss,
                    TradesTakeProfit,
                    UltraShortTerm,
@@ -453,7 +453,7 @@ int spacings[gid_Panic +1];
                   Symbol(),
                    SellStartingPrice,
                    StrToInteger(distances[i]),
-                   InitialPIPsToStart,
+                   (int) (InitialPIPsToStart * SellTradesDistanceCoefficient),
                    TradesStopLoss,
                    TradesTakeProfit,
                    InstantTerm,
