@@ -24,7 +24,7 @@ extern bool CreateSells = true;
 extern double BuyStartingPrice = 0.0;
 extern double SellStartingPrice = 0.0;
 
-extern int TradesDistance = 200;
+extern int TradesDistance = 150;
 
 extern string PIPsToStartI = "8,16";
 extern string PIPsToStartUS = "7,15";
